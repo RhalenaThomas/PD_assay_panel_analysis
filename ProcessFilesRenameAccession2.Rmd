@@ -1,0 +1,863 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Protein 
+- process to add SYMBOL NAMES 
+-  
+
+
+```{r}
+library(readxl)
+library(dplyr)
+```
+
+
+Read in the files proteomics
+
+```{r}
+
+df.bright <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/BrightGenome_TMT_2022_Roxanne_6_weeks.xlsx",col_names = TRUE)
+
+colnames(df.bright)
+
+
+```
+
+
+Example of description
+
+```{r}
+df.bright$Description[1:3]
+```
+
+Extract symbol from description
+
+```{r}
+# Extract the GN value from the Description column
+df.bright$Gene <- sub(".*GN=([^ ]+).*", "\\1", df.bright$Description)
+
+# Replace any values in Symbol that did not have a GN entry with NA
+df.bright$Gene[!grepl("GN=", df.bright$Description)] <- NA
+
+# View the updated dataframe
+head(df.bright[, c("Description", "Gene")])
+
+
+
+```
+
+```{r}
+# Count the number of NA values in the Symbol column
+na_count <- sum(is.na(df.bright$Gene))
+
+# Print the result
+print(na_count)
+
+
+```
+
+
+
+Convert Accession numbers to SYMBOLS
+
+```{r}
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install("mygene")
+
+library(mygene)
+
+# Query using mygene
+
+accessions <- df.bright$Accession
+result <- queryMany(accessions, scopes = "uniprot", fields = c("symbol"), species = "human", returnall = FALSE)
+names.df <- as.data.frame(result)
+
+dim(names.df)
+dim(df.bright)
+
+# extra values are added in the conversion
+# add the values back into the dataframe matching Accession and query
+
+df1 <- df.bright
+
+# Merge df1 and names.df by Accession and query, keeping all rows from df1
+merged_df.b <- merge(df1, names.df[, c("query", "symbol")], by.x = "Accession", by.y = "query", all.x = TRUE)
+
+# Create a new column "Symbol" in df1 based on the merged results
+merged_df.b <- merged_df.b %>%
+  mutate(Symbol = ifelse(is.na(symbol), Accession, symbol))
+
+
+colnames(merged_df.b)
+
+# Count the number of NA values in the Symbol column
+na_count <- sum(is.na(merged_df.b$symbol))
+
+# Print the result
+print(na_count)
+
+
+```
+
+Check if there are some with symbol but no gene name
+```{r}
+# Count the number of NA values in the Symbol column
+na_count <- sum(is.na(merged_df.b$symbol)&(is.na(merged_df.b$Gene)))
+
+# Print the result
+print(na_count)
+
+# see if the symbol and genes are matching 
+
+
+head(merged_df.b[, c("Description", "Gene", "symbol")],10)
+
+```
+Symbol appears the same as gene and is not needed
+
+```{r}
+# Count the number of rows where Accession is equal to Symbol
+matching_count <- sum(merged_df.b$Gene == merged_df.b$Symbol, na.rm = TRUE)
+matching_count <- sum(merged_df.b$Gene == merged_df.b$symbol, na.rm = TRUE) # has na in symbol
+# Print the result
+print(matching_count)
+
+dim(merged_df.b)
+
+# Filter rows where either Symbol or Gene is NA
+filtered_df <- merged_df.b[!is.na(merged_df.b$Symbol) & !is.na(merged_df.b$Gene), ]
+
+# Create a dataframe of rows where Symbol and Gene don't match
+mismatch_df <- filtered_df[filtered_df$Symbol != filtered_df$Gene, ]
+
+dim(mismatch_df)
+# View the result
+head(mismatch_df[, c("Description", "Gene", "symbol")],10)
+
+
+# Filter rows where either Symbol or Gene is NA
+filtered_df <- merged_df.b[!is.na(merged_df.b$symbol) & !is.na(merged_df.b$Gene), ]
+
+# Create a dataframe of rows where Symbol and Gene don't match
+mismatch_df <- filtered_df[filtered_df$symbol != filtered_df$Gene, ]
+
+dim(mismatch_df)
+# View the result
+head(mismatch_df[, c("Description", "Gene", "symbol")],10)
+
+```
+Looks like 67 proteins do not match the gene names.
+
+I will keep the gene names and make a note here
+
+
+
+
+```{r}
+# Extract the GN value from the Description column
+df.bright$Symbol <- sub(".*GN=([^ ]+).*", "\\1", df.bright$Description)
+
+# Replace NA values in the Symbol column with corresponding Accession values
+df.bright$Symbol[!grepl("GN=", df.bright$Description)] <- df.bright$Accession[!grepl("GN=", df.bright$Description)]
+
+# View the updated dataframe
+head(df.bright[, c("Accession", "Description", "Symbol")])
+
+
+```
+
+Check if there are 16 values where the accession is they symbol
+
+```{r}
+# Count the number of rows where Accession is equal to Symbol
+matching_count <- sum(df.bright$Accession == df.bright$Symbol)
+
+# Print the result
+print(matching_count)
+
+# GOOD
+
+```
+
+Now df.bright has Symbol for all entries
+
+```{r}
+colnames(df.bright)
+```
+
+
+
+Selected the desired columns for saving further analysis
+
+Logfold change and pvalues for each line vs control 
+
+```{r}
+
+df.dpe.b <- df.bright[, c(4,37,5:19)]
+colnames(df.dpe.b)
+
+```
+
+Save the csv with the logfold change now with gene names accept for the 16 without gene names and will have accession numbers
+
+```{r}
+write.csv(df.dpe.b,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsDifferentialAbundance_bright_all.csv")  
+
+# make files for each gene vs control DPE  /DPE_files
+```
+
+
+All samples here are 6 weeks DA neurons
+
+```{r}
+df.dpe <- df.dpe.b
+
+#a53t
+df.t <- df.dpe[, c(1:3,4,8)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/SNCA-A53T_ProtomicsDifferentialAbundance.csv")
+
+#GBA
+df.t <- df.dpe[, c(1:3,5,9)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/GBA-KO_ProtomicsDifferentialAbundance.csv")
+
+#PINK1
+df.t <- df.dpe[, c(1:3,6,10)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/PINK1-KO_ProtomicsDifferentialAbundance.csv")
+
+#Parkin
+df.t <- df.dpe[, c(1:3,7,11)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/PRKN-KO_ProtomicsDifferentialAbundance.csv")
+
+
+
+```
+
+Abundance
+```{r}
+df <- df.bright[, c(4,37,5,21:36)]
+colnames(df)
+
+```
+
+
+
+Rename columns
+
+```{r}
+colnames(df) <-  c("Accession","Symbol","Description","A53T-1","A53T-2","A53T-3","Control-1","Control-2","Control-3","GBA.KO-1","GBA.KO-2","GBA.KO-3","PINK1.KO-1","PINK1.KO-2","PINK1.KO-3","POOL","PRKN.KO-1","PRKN.KO-2","PRKN.KO-3")
+
+colnames(df)
+```
+
+Save abundance values renamed as a csv
+
+```{r}
+
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_bright.csv")
+
+# keep the abundance df 
+df.ab.bright <- df
+
+head(df.ab.bright)
+
+
+```
+
+
+# Dark genome data
+
+
+Read in the files
+
+```{r}
+
+df.dark <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/DarkGenome_TMT_March2024_6_weeks_refractionated_complete.xlsx",col_names = TRUE)
+
+colnames(df.dark)
+```
+
+Add all the gene names
+```{r}
+
+# Extract the GN value from the Description column
+df.dark$Symbol <- sub(".*GN=([^ ]+).*", "\\1", df.dark$Description)
+
+# Replace NA values in the Symbol column with corresponding Accession values
+df.dark$Symbol[!grepl("GN=", df.dark$Description)] <- df.dark$Accession[!grepl("GN=", df.dark$Description)]
+
+# View the updated dataframe
+head(df.dark[, c("Accession", "Description", "Symbol")])
+
+# check how many where not known
+
+# Count the number of rows where Accession is equal to Symbol
+matching_count <- sum(df.dark$Accession == df.dark$Symbol)
+
+# Print the result
+print(matching_count)
+
+# only 1
+
+```
+```{r}
+colnames(df.dark)
+```
+
+
+Selected the desired columns for saving further analysis
+
+Logfold change and pvalues for each line vs control 
+
+```{r}
+
+df.dpe.d <- df.dark[, c(4,54,5:19)]
+colnames(df.dpe.d)
+
+```
+
+
+```{r}
+write.csv(df.dpe.d,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsDifferentialAbundance_Dark_all.csv")  
+
+# make files for each gene vs control DPE  /DPE_files
+```
+
+
+All samples here are 6 weeks DA neurons
+
+```{r}
+#IGSF9B
+
+df.dpe <- df.dpe.b
+df.t <- df.dpe[, c(1:3,4,8)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/IGSF9B-KO_ProtomicsDifferentialAbundance.csv")
+
+#INPP5F
+df.t <- df.dpe[, c(1:3,5,9)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/INPP5F-KO_ProtomicsDifferentialAbundance.csv")
+
+#IP6K2
+df.t <- df.dpe[, c(1:3,6,10)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/IP6K2-KO_ProtomicsDifferentialAbundance.csv")
+
+#SH3GL2
+df.t <- df.dpe[, c(1:3,7,11)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files2/SH3GL2-KO_ProtomicsDifferentialAbundance.csv")
+
+
+
+```
+
+
+Abundance
+```{r}
+df <- df.dark[, c(4,54,5,38:53)]
+colnames(df)
+
+```
+
+Rename columns
+
+```{r}
+
+dark.ab <- c("Accession","Symbol","Description","Control-1",
+                       "Control-2","Control-3",
+                       "Control-4","IGSF9B.KO-1",
+                       "IGSF9B.KO-2","INPP5F.KO-1",
+                       "INPP5F.KO-2","INPP5F.KO-3",
+                       "IP6K2.KO-1","IP6K2.KO-2",
+                       "IP6K2.KO-4","POOL",
+                       "SH3GL2.KO-1","SH3GL2.KO-2","SH3GL2.KO-3")
+
+colnames(df) <-dark.ab
+colnames(df)
+```
+
+Save abundance values renamed as a csv
+
+```{r}
+
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_dark.csv")
+
+# keep the abundance df 
+df.ab.dark <- df
+
+head(df.ab.dark)
+
+
+```
+
+
+Attempt to harmonize the data:
+
+```{r}
+df1 <- df.ab.bright
+df2 <- df.ab.dark
+
+
+
+```
+
+
+Step 1 and 2 : align and calculate the mean or median of the control samples in both datasets.
+```{r}
+
+library(dplyr)
+
+
+# Identify common genes between the two dataframes
+common_genes <- intersect(df1$Accession, df2$Accession)
+
+# Subset both dataframes to include only common genes
+df1_common <- df1 %>% filter(Accession %in% common_genes)
+df2_common <- df2 %>% filter(Accession %in% common_genes)
+
+
+# Calculate the mean of control samples for each gene in the aligned df1
+control_mean_df1 <- df1_common %>%
+  rowwise() %>%
+  mutate(Control_Mean = mean(c_across(starts_with("Control")), na.rm = TRUE)) %>%
+  ungroup()
+
+# Calculate the mean of control samples for each gene in the aligned df2
+control_mean_df2 <- df2_common %>%
+  rowwise() %>%
+  mutate(Control_Mean = mean(c_across(starts_with("Control")), na.rm = TRUE)) %>%
+  ungroup()
+
+class(control_mean_df1)
+class(control_mean_df2)
+
+
+str(control_mean_df1)
+str(control_mean_df2)
+
+
+```
+
+Step 3: Calculate the Adjustment Factor
+
+```{r}
+# Merge the two dataframes to calculate the adjustment factor
+merged_means <- control_mean_df1 %>%
+  dplyr::select(Accession, Control_Mean_df1 = Control_Mean) %>%
+  dplyr::inner_join(control_mean_df2 %>% dplyr::select(Accession, Control_Mean_df2 = Control_Mean), by = "Accession") %>%
+  dplyr::mutate(Adjustment_Factor = Control_Mean_df1 - Control_Mean_df2)
+
+
+
+```
+
+Step 4: Adjust the Abundance Values
+
+```{r}
+# Ensure df1 and df2 are data.frames
+df1 <- as.data.frame(df1)
+df2 <- as.data.frame(df2)
+merged_means <- as.data.frame(merged_means)
+
+# Merge adjustment factors with df1
+df1_merged <- merge(df1, merged_means[, c("Accession", "Adjustment_Factor")], by = "Accession")
+
+# Merge adjustment factors with df2
+df2_merged <- merge(df2, merged_means[, c("Accession", "Adjustment_Factor")], by = "Accession")
+
+
+# Function to adjust values based on Adjustment_Factor
+adjust_values <- function(df, adjustment_column_name) {
+  # Identify experimental columns
+  experimental_columns <- grep("^A53T|^PRKN.KO", names(df), value = TRUE)
+  
+  # Apply the adjustment factor
+  df[experimental_columns] <- df[experimental_columns] + df[[adjustment_column_name]]
+  
+  return(df)
+}
+
+# Adjust values in df1
+df1_adjusted <- adjust_values(df1_merged, "Adjustment_Factor")
+
+# Adjust values in df2
+df2_adjusted <- adjust_values(df2_merged, "Adjustment_Factor")
+
+
+df1_adjusted <- df1_adjusted %>% dplyr::select(-"Adjustment_Factor")
+df2_adjusted <- df2_adjusted %>% dplyr::select(-"Adjustment_Factor")
+
+colnames(df1_adjusted)
+colnames(df2_adjusted)
+
+```
+
+
+Join the dataframes together and get back the missing rows of data
+```{r}
+# join adjusted dfs
+# Perform a full join on the Accession column to combine df1_adjusted and df2_adjusted
+
+
+combined_df <- merge(df1_adjusted, df2_adjusted, by = c("Symbol","Accession","Description"), all = TRUE)
+
+combined_unadjusted <- merge(df1, df2, by = c("Symbol","Accession","Description"), all = TRUE)
+
+dim(combined_df)
+dim(combined_unadjusted)
+
+colnames(combined_df)
+colnames(combined_unadjusted)
+
+# find the genes not in the combined that are in the unadjusted
+
+# Identify missing genes
+missing_genes <- combined_unadjusted[!combined_unadjusted$Symbol %in% combined_df$Symbol, ]
+
+
+# Ensure combined_df has the same columns as combined_unadjusted
+missing_genes_standardized <- missing_genes %>%
+  dplyr::select(all_of(colnames(combined_df)))
+
+# Combine adjusted data with missing genes
+final_combined_df <- rbind(combined_df, missing_genes_standardized)
+
+
+# Standardize columns in missing_genes
+# Standardize columns in missing_genes
+missing_genes_standardized <- missing_genes %>%
+  dplyr::select(all_of(colnames(combined_df)))
+
+# Replace NA values with NA (base R approach)
+missing_genes_standardized[is.na(missing_genes_standardized)] <- NA
+
+# Combine the dataframes
+final_combined_df <- rbind(combined_df, missing_genes_standardized)
+dim(final_combined_df)
+
+
+```
+
+Plot a heat map and see how it looks use plot_clustered_protein_heatmap_zscore function
+```{r}
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(pheatmap)
+
+# Function to plot heatmap of relative abundance with Z-scores and clustering
+plot_clustered_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE, cell_width = 10, cell_height = 10) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  }
+
+  # Create the heatmap with hierarchical clustering
+  pheatmap(
+    data_matrix,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    color = colorRampPalette(colors)(100),
+    na_col = na_color,
+    main = "Clustered Protein Abundance Heatmap (Z-Score)",
+    cellwidth = cell_width,   # Adjust cell width
+    cellheight = cell_height  # Adjust cell height
+  )
+}
+
+
+# Function to plot heatmap of relative abundance with Z-scores
+protein_zscore <- function(data, proteins, sample_patterns, group_means = FALSE) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  }
+  
+  return(data_long)
+}
+
+
+```
+
+
+```{r}
+
+df <- final_combined_df
+genelist <- c("GBA","PALM2","BAG6","BAG1","ABCB1","LMNA","CTSB","PBXIP1","FAM162A","GALC","DLST")
+
+genelist <- c("LMNA","CTSB","PBXIP1","FAM162A","GALC","DLST")
+df.long <- protein_zscore(data = df,
+  proteins = genelist, # Example protein names
+  sample_patterns = c("Control","A53T","GBA","PINK1","PRKN","INPP5F","IGSF9B" ,"SH3GL2","IP6K2"), group_means = TRUE) 
+  
+max(df.long$Abundance, na.rm = TRUE)
+min(df.long$Abundance, na.rm = TRUE)
+
+# Example usage
+plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = genelist, # Example protein names
+  sample_patterns = c("Control", "A53T","GBA.KO","PINK1.KO","PRKN.KO","INPP5F.KO","IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2,-1,-0.5, 0, 1,2,2.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 5, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+
+
+```
+Function accounting for NA by ignoring when making distance matrix
+
+
+```{r}
+# Function to plot heatmap of relative abundance with Z-scores and clustering
+plot_clustered_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE, cell_width = 10, cell_height = 10) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Exclude rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  # Identify excluded genes (all NA values)
+  excluded_genes <- setdiff(proteins, data_filtered$Symbol)
+  if (length(excluded_genes) > 0) {
+    print(paste("Excluded genes (all NA):", paste(excluded_genes, collapse = ", ")))
+  } else {
+    print("No genes were excluded for being all NA.")
+  }
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  }
+
+  # Replace NA values with 0 for dendrogram calculation (for clustering) but leave NA for plotting
+  data_matrix_clustering <- data_matrix
+  data_matrix_clustering[is.na(data_matrix_clustering)] <- 0
+
+  # Create the heatmap with hierarchical clustering
+  pheatmap(
+    data_matrix_clustering,       # Use adjusted matrix for clustering
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    color = colorRampPalette(colors)(100),
+    na_col = na_color,            # Color NA values as grey
+    main = "Clustered Protein Abundance Heatmap (Z-Score)",
+    cellwidth = cell_width,       # Adjust cell width
+    cellheight = cell_height      # Adjust cell height
+  )
+}
+
+
+```
+
+```{r}
+plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = genelist, # Example protein names
+  sample_patterns = c("Control", "A53T","GBA.KO","PINK1.KO","PRKN.KO","INPP5F.KO","IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2,-1.5,-1,-0.5, 0, 1,2,2.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 10, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+```
+
+
+
+The data is still not aligned try an R combate package
+
+```{r}
+
+
+
+
+```
+
+

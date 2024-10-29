@@ -1,0 +1,3360 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Differential analysis
+
+
+# Protein
+Read in all the DPE files calculated by JF Trempe Lab or/and  TMT-analyst by RL
+Files separated by genotype/iPSC line in the workbook "ProcessFilesRenameAccession.Rmd"
+All data is from 6 weeks DANs from iPSC lines in AIW002-02 background
+Bright genome and dark genome where run separately
+
+```{r}
+# read in csv into to make a list of dataframes
+
+# Load required library
+library(readr)
+
+# the protein DE files are here
+folder_path <- "/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/"
+
+# List all CSV files in the folder
+csv_files <- list.files(path = folder_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Read all CSV files into a list of dataframes, skipping the first column
+df_list <- lapply(csv_files, function(file) {
+  read_csv(file, col_types = cols(.default = "?", `...1` = col_skip()))
+})
+
+# Optionally, name each element of the list with the respective file names (without the .csv extension)
+names(df_list) <- tools::file_path_sans_ext(basename(csv_files))
+
+# Print the names of the dataframes
+print(names(df_list))
+
+# test that these are dataframes
+
+df.gba <- df_list$`GBA-KO_ProtomicsDifferentialAbundance`
+head(df.gba)
+
+
+```
+Rename the list
+```{r}
+names(df_list) <- c("GBA-KO","IGSF9B-KO","INPP5F-KO","IP6K2-KO","PINK1-KO","PRKN-KO","SH3GL2-KO","SNCA-A53T")
+
+print(names(df_list))
+head(df_list$`GBA-KO`)
+
+```
+
+# Volcano plots
+Thresholds: Log2 abundance ratio > 0.5 and p value < 0.05
+
+```{r, fig.height=4}
+#library(EnhancedVolcano)
+
+
+pA53T <- EnhancedVolcano(df_list$`SNCA-A53T`,
+    lab = df_list$`SNCA-A53T`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-3,3),
+    ylim = c(0, 7),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "SNCA-A53T vs Control",
+    subtitle = "Differential Protein Abundance"
+   )  + scale_x_continuous(breaks = seq(-3, 3, by = 0.5)) + # Adjust the x-axis breaks as needed
+scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-3, 3), ylim = c(0, 7)) +  # Ensure that the plot does not display points beyond this range
+ theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+
+pGBA <- EnhancedVolcano(df_list$`GBA-KO`,
+    lab = df_list$`GBA-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-3,3),
+    ylim = c(0, 7),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "GBA-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   )  + scale_x_continuous(breaks = seq(-4, 4, by = 0.5)) + # Adjust the x-axis breaks as needed
+scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-3, 3), ylim = c(0, 7)) +  # Ensure that the plot does not display points beyond this range
+ theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+
+pPINK1 <- EnhancedVolcano(df_list$`PINK1-KO`,
+    lab = df_list$`PINK1-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-4,3),
+    ylim = c(0, 7),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "PINK1-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-4, 4, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-4, 3), ylim = c(0, 7)) + # Ensure that the plot does not display points beyond this range
+ theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+# Plot for PRKN-KO
+pPRKN <- EnhancedVolcano(df_list$`PRKN-KO`,
+    lab = df_list$`PRKN-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-5,4),
+    ylim = c(0, 10.5),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "PRKN-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-5, 4, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 10.5), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-5, 4), ylim = c(0, 10.5)) +  # Ensure that the plot does not display points beyond this range
+  theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+pIGSF9B <- EnhancedVolcano(df_list$`IGSF9B-KO`,
+    lab = df_list$`IGSF9B-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-4,5.5),
+    ylim = c(0, 11),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "IGSF9B-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-4, 5.5, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 11), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-4, 5.5), ylim = c(0, 11)) +  # Ensure that the plot does not display points beyond this range
+  theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+
+pINPP5F <- EnhancedVolcano(df_list$`INPP5F-KO`,
+    lab = df_list$`INPP5F-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-3,3),
+    ylim = c(0, 10.5),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "INPP5F-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-3, 3, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 10.5), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-3, 3), ylim = c(0, 10.5)) +  # Ensure that the plot does not display points beyond this range
+  theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+pIP6K2 <- EnhancedVolcano(df_list$`IP6K2-KO`,
+    lab = df_list$`IP6K2-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-2,5.2),
+    ylim = c(0, 8),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "IP6K2-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-2.5, 2, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 8), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-2.5, 2), ylim = c(0, 8)) +  # Ensure that the plot does not display points beyond this range
+  theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+pSH3GL2 <- EnhancedVolcano(df_list$`SH3GL2-KO`,
+    lab = df_list$`SH3GL2-KO`$Symbol,
+    x = 'log2_ratio',
+    y = 'p-value',
+    pCutoff = 0.05,
+    FCcutoff = 0.5,
+    colAlpha = 0.5,
+    labSize = 5,
+    xlim = c(-3,2.5),
+    ylim = c(0, 10.5),
+    drawConnectors = FALSE,
+    widthConnectors = 0.1,
+    max.overlaps = 40,
+    legendPosition = "right",
+    title = "SH3GL2-KO vs Control",
+    subtitle = "Differential Protein Abundance"
+   ) + scale_x_continuous(breaks = seq(-3, 2.5, by = 0.5)) +  # Adjust the x-axis breaks as needed
+  scale_y_continuous(limits = c(0, 10.5), expand = c(0, 0)) +  # Remove space below the y-axis
+  coord_cartesian(xlim = c(-3, 2.5), ylim = c(0, 10.5)) +  # Ensure that the plot does not display points beyond this range
+  theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 14))  # Adjust x-axis label size
+
+
+
+
+pA53T
+pGBA
+pPINK1
+pPRKN
+pIGSF9B
+pINPP5F
+pIP6K2
+pSH3GL2
+
+```
+
+Make a filtered list of dataframes with the thresholds
+
+```{r}
+colnames(df_list$`GBA-KO`)
+```
+
+
+
+```{r}
+# use function to filter the list of dataframes
+# update function to match column names
+
+# Function to filter DGE results based on criteria signle DGE dataframe filter function
+filter_dge_results <- function(dge_results, logFC_threshold = NULL, logFC_direction = NULL, p_threshold = 0.01, p_col = "p-value") {
+  if (!is.null(logFC_threshold)) {
+    if (logFC_direction == "positive") {
+      dge_results <- dge_results %>%
+        filter(log2_ratio > logFC_threshold)
+    } else if (logFC_direction == "negative") {
+      dge_results <- dge_results %>%
+        filter(log2_ratio < -logFC_threshold)
+    } else if (logFC_direction == "both") {
+      dge_results <- dge_results %>%
+        filter(abs(log2_ratio) > logFC_threshold)
+    }
+  }
+  
+  dge_results_filtered <- dge_results %>%
+    filter(!!sym(p_col) < p_threshold)
+  
+  return(dge_results_filtered)
+}
+
+# Apply filtering to DGE lists - uses the function above to filter each cell type list inside each contrast list
+filter_dge_lists <- function(dge_lists, logFC_threshold = 0.25, logFC_direction = "both", p_threshold = 0.01, p_col = "p_val_adj") {
+  dge_lists_filtered <- lapply(dge_lists, function(dge_list) {
+    lapply(dge_list, function(dge_df) {
+      filtered_df <- filter_dge_results(dge_df, logFC_threshold, logFC_direction, p_threshold, p_col)
+      return(filtered_df)
+    })
+  })
+  return(dge_lists_filtered)
+}
+
+
+
+
+# Function to convert specified columns to numeric
+convert_to_numeric <- function(df, cols) {
+  df[cols] <- lapply(df[cols], as.numeric)
+  return(df)
+}
+
+# Apply conversion to each dataframe in the list
+convert_list_columns <- function(df_list, cols) {
+  lapply(df_list, function(df) {
+    convert_to_numeric(df, cols)
+  })
+}
+
+# Columns to convert
+numeric_cols <- c("p-value", "log2_ratio")
+
+# Convert columns to numeric in all dataframes in the list
+df_list_numeric <- convert_list_columns(df_list, numeric_cols)
+
+# For filtering lists of DGE results
+filtered_DEP <- filter_dge_lists(df_list_numeric, logFC_threshold = 0.5, logFC_direction = "both", p_threshold = 0.05, p_col = "p-value")
+
+
+head(df_list$`IGSF9B-KO`)
+head(df_list_numeric$`IGSF9B-KO`)
+
+```
+
+```{r}
+library(dplyr)
+
+# Function to filter DGE results based on criteria
+filter_dge_results <- function(dge_results, logFC_threshold = NULL, logFC_direction = NULL, p_threshold = 0.01, p_col = "p-value") {
+  # Debugging: Print column names to check if p_col is present
+  print(paste("Columns in dataframe:", paste(colnames(dge_results), collapse = ", ")))
+  
+  if (!p_col %in% colnames(dge_results)) {
+    stop(paste("Column", p_col, "not found in the dataframe"))
+  }
+  
+  # Ensure columns are numeric
+  print(paste("Classes of columns:", paste(sapply(dge_results, class), collapse = ", ")))
+  
+  # Apply logFC filtering if specified
+  if (!is.null(logFC_threshold)) {
+    if (logFC_direction == "positive") {
+      dge_results <- dge_results %>%
+        filter(log2_ratio > logFC_threshold)
+    } else if (logFC_direction == "negative") {
+      dge_results <- dge_results %>%
+        filter(log2_ratio < -logFC_threshold)
+    } else if (logFC_direction == "both") {
+      dge_results <- dge_results %>%
+        filter(abs(log2_ratio) > logFC_threshold)
+    }
+  }
+  
+  # Apply p-value filtering
+  dge_results_filtered <- dge_results %>%
+    filter(!!sym(p_col) < p_threshold)
+  
+  return(dge_results_filtered)
+}
+
+
+test <- filter_dge_results(df_list$`GBA-KO`,logFC_direction = "both", logFC_threshold = 0.5, p_threshold = 0.05, p_col = "p-value")
+
+# now apply the filter function across all df in one list
+
+filter_dge_lists <- function(dge_lists, logFC_threshold = 0.25, logFC_direction = "both", p_threshold = 0.01, p_col = "p-value") {
+  # Iterate over each dataframe in the list
+  dge_lists_filtered <- lapply(dge_lists, function(dge_df) {
+    # Debugging: Print column names of the dataframe being processed
+    print(paste("Processing dataframe with columns:", paste(colnames(dge_df), collapse = ", ")))
+    
+    # Apply the filter function to each dataframe
+    filtered_df <- filter_dge_results(dge_df, logFC_threshold, logFC_direction, p_threshold, p_col)
+    
+    return(filtered_df)
+  })
+  
+  return(dge_lists_filtered)
+}
+
+# run the filtering
+filtered_DEP <- filter_dge_lists(df_list, logFC_threshold = 0.5, logFC_direction = "both", p_threshold = 0.05, p_col = "p-value")
+
+
+
+```
+
+Get gene counts
+
+```{r}
+
+# function to count up and down regulated Proteins
+count_regulations <- function(dge_df) {
+  # Ensure columns are numeric
+  dge_df$log2_ratio <- as.numeric(dge_df$log2_ratio)
+  
+  # Count upregulated and downregulated proteins
+  upregulated_count <- sum(dge_df$log2_ratio > 0, na.rm = TRUE)
+  downregulated_count <- sum(dge_df$log2_ratio < 0, na.rm = TRUE)
+  
+  return(c(Upregulated = upregulated_count, Downregulated = downregulated_count))
+}
+
+summarize_regulations <- function(dge_lists) {
+  # Get names of the dataframes
+  df_names <- names(dge_lists)
+  
+  # Apply the counting function to each dataframe and name the result
+  counts_list <- lapply(dge_lists, function(df) {
+    counts <- count_regulations(df)
+    return(counts)
+  })
+  
+  # Convert the list of counts into a dataframe
+  result_df <- do.call(rbind, counts_list)
+  
+  # Set the row names to the names of the original dataframes
+  rownames(result_df) <- df_names
+  
+  return(result_df)
+}
+
+# apply to filtered list
+regulation_summary <- summarize_regulations(filtered_DEP)
+print(regulation_summary)
+
+
+
+```
+
+
+
+```{r}
+colnames(filtered_DEP$`PINK1-KO`)
+
+```
+
+Function to get the top n genes up and down
+
+```{r}
+# Function to select top n up and down regulated genes
+select_top_genes <- function(dge_df, logFC_col = "log2_ratio", symbol_col = "Symbol", n = 10) {
+  # Ensure log2_ratio column is numeric
+  dge_df[[logFC_col]] <- as.numeric(dge_df[[logFC_col]])
+  
+  # Sort dataframe by log2_ratio to get top upregulated and downregulated genes
+  top_upregulated <- dge_df %>%
+    arrange(desc(!!sym(logFC_col))) %>%
+    head(n) %>%
+    pull(!!sym(symbol_col))
+  
+  top_downregulated <- dge_df %>%
+    arrange(!!sym(logFC_col)) %>%
+    head(n) %>%
+    pull(!!sym(symbol_col))
+  
+  # Combine upregulated and downregulated genes into a single vector
+  top_genes <- c(top_upregulated, top_downregulated)
+  
+  return(top_genes)
+}
+
+# Example usage
+top_genes <- select_top_genes(filtered_DEP$`PINK1-KO`, n = 10)
+print(top_genes)
+
+
+
+```
+
+```{r}
+# Function to select top n up and down regulated genes
+select_top_genes <- function(dge_df, logFC_col = "log2_ratio", symbol_col = "Symbol", n = 10) {
+  # Ensure log2_ratio column is numeric
+  dge_df[[logFC_col]] <- as.numeric(dge_df[[logFC_col]])
+  
+  # Sort dataframe by log2_ratio to get top upregulated genes
+  top_upregulated <- dge_df %>%
+    arrange(desc(!!sym(logFC_col))) %>%
+    head(n) %>%
+    pull(!!sym(symbol_col))
+  
+  # Sort dataframe by log2_ratio to get top downregulated genes
+  top_downregulated <- dge_df %>%
+    arrange(!!sym(logFC_col)) %>%
+    head(n) %>%
+    pull(!!sym(symbol_col))
+  
+  # Combine upregulated and downregulated genes into a single vector
+  # Upregulated first, followed by downregulated
+  top_genes <- c(top_upregulated, top_downregulated)
+  
+  return(top_genes)
+}
+
+# Example usage
+top_genes <- select_top_genes(filtered_DEP$`PINK1-KO`, n = 5)
+print(top_genes)
+
+```
+```{r}
+
+df.pink1 <- filtered_DEP$`PINK1-KO`
+
+
+```
+
+
+
+
+
+Plot a heatmap of the top up and down genes
+
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot heatmap of relative abundance
+plot_protein_heatmap <- function(data, proteins, sample_patterns, na_color = "grey") {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))  # Explicitly use dplyr::select
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  # Reshape data for ggplot
+  data_long <- data_filtered %>%
+    pivot_longer(
+      cols = -Symbol, 
+      names_to = "Sample", 
+      values_to = "Abundance"
+    )
+
+  # Create the heatmap
+  heatmap_plot <- ggplot(data_long, aes(x = Sample, y = Symbol, fill = Abundance)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(low = "blue", mid = na_color, high = "red", na.value = na_color, midpoint = median(data_long$Abundance, na.rm = TRUE)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Protein Abundance Heatmap", x = "Samples", y = "Proteins")
+  
+  return(heatmap_plot)
+}
+
+
+
+
+```
+
+
+
+Plot control and IPSC line for each list 
+
+```{r}
+
+abundance.bright <- read.csv("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_bright.csv")
+
+colnames(abundance.bright)
+
+df <- abundance.bright[, c(3,5:16,18:20)]
+
+df.bright <- abundance.bright[, c(3,5:16,18:20)]
+# Example usage
+# Assuming 'df' is your dataframe with relative abundance data
+heatmap_plot <- plot_protein_heatmap(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO")
+)
+
+# Print the plot
+print(heatmap_plot)
+
+```
+z-score
+
+```{r}
+#library(ggplot2)
+#library(dplyr)
+#library(tidyr)
+
+#data = df
+#proteins = top_genes
+#sample_patterns =  c("Control", "PINK1.KO")
+
+# Function to plot heatmap of relative abundance with Z-scores
+plot_protein_heatmap_zscore <- function(data, proteins, sample_patterns, na_color = "grey"){
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  # Calculate Z-scores for each protein across the selected samples
+  data_zscore <- data_filtered %>%
+    mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+  # Reshape data for ggplot
+  data_long <- data_zscore %>%
+    pivot_longer(
+      cols = starts_with("z_"), 
+      names_to = "Sample", 
+      values_to = "Abundance"
+    ) %>%
+    mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  # Create the heatmap
+  heatmap_plot <- ggplot(data_long, aes(x = Sample, y = Symbol, fill = Abundance)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(
+    #colors = c("#ffffff", "#ffcccc", "#ff6666", "#ff3333","#fa0505", "#cc0000","#990000"),
+    #colors = c("#fdfef4", "#DAF7A6", "#FFC300", "#FF5733","#e71f05","#4d0b02"),
+    colors = c("snow","lightgoldenrod1","gold1","darkorange1","red2","firebrick4"),
+    values = scales::rescale(c(-0.5, -0.25, 0, 1,2,2.5,2.75)),
+    na.value = na_color,
+    guide = guide_colorbar(
+      barwidth = 1,
+      barheight = 10,
+      title.position = "top",
+      title.hjust = 0.5
+    )) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Protein Abundance Heatmap (Z-Score)", x = "Samples", y = "Proteins")
+  
+  return(heatmap_plot)
+}
+
+# Example usage
+heatmap_plot <- plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO")
+)
+
+# Print the plot
+print(heatmap_plot)
+
+
+
+
+```
+
+
+Adjust the function
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot heatmap of relative abundance with Z-scores
+plot_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey") {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  # Calculate Z-scores for each protein across the selected samples
+  data_zscore <- data_filtered %>%
+    mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+
+  # Reshape data for ggplot
+  data_long <- data_zscore %>%
+    pivot_longer(
+      cols = starts_with("z_"), 
+      names_to = "Sample", 
+      values_to = "Abundance"
+    ) %>%
+    mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+
+  # Create the heatmap
+  heatmap_plot <- ggplot(data_long, aes(x = Sample, y = Symbol, fill = Abundance)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(
+      colors = colors,
+      values = scales::rescale(scale_values),
+      na.value = na_color,
+      guide = guide_colorbar(
+        barwidth = 1,
+        barheight = 10,
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Protein Abundance Heatmap (Z-Score)", x = "Samples", y = "Proteins")
+  
+  return(heatmap_plot)
+}
+
+# Example usage
+heatmap_plot <- plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2.5, -2, -1, 0, 1, 2, 2.5) # Adjust based on your data range
+)
+
+# Print the plot
+print(heatmap_plot)
+
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot heatmap of relative abundance with Z-scores
+plot_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  }
+
+  # Create the heatmap
+  heatmap_plot <- ggplot(data_long, aes(x = Sample, y = Symbol, fill = Abundance)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(
+      colors = colors,
+      values = scales::rescale(scale_values),
+      na.value = na_color,
+      guide = guide_colorbar(
+        barwidth = 1,
+        barheight = 10,
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Protein Abundance Heatmap (Z-Score)", x = "Samples", y = "Proteins")
+  
+  return(heatmap_plot)
+}
+
+# Example usage
+heatmap_plot <- plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2.5, -2, -1, 0, 1, 2, 2.5), # Adjust based on your data range
+  group_means = TRUE # Set to FALSE if you want individual samples
+)
+
+# Print the plot
+print(heatmap_plot)
+
+
+# Example usage
+heatmap_plot <- plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2.5, -2, -1, 0, 1, 2, 2.5), # Adjust based on your data range
+  group_means = FALSE # Set to FALSE if you want individual samples
+)
+
+# Print the plot
+print(heatmap_plot)
+
+
+```
+
+
+Control width
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot heatmap of relative abundance with Z-scores
+plot_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE, tile_width = 0.9) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  }
+
+  # Create the heatmap
+  heatmap_plot <- ggplot(data_long, aes(x = Sample, y = Symbol, fill = Abundance)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(
+      colors = colors,
+      values = scales::rescale(scale_values),
+      na.value = na_color,
+      guide = guide_colorbar(
+        barwidth = 1,
+        barheight = 10,
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      aspect.ratio = 1 / tile_width # Adjust aspect ratio
+    ) +
+    labs(title = "Protein Abundance Heatmap (Z-Score)", x = "Samples", y = "Proteins")
+  
+  return(heatmap_plot)
+}
+
+# Example usage
+heatmap_plot <- plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-2.5, -2, -1, 0, 1, 2, 2.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  tile_width = 0.25 # Adjust the width of the tiles (default is 0.9)
+)
+
+# Print the plot
+print(heatmap_plot)
+
+
+```
+
+Function to see the gene expression
+```{r}
+
+# Function to plot heatmap of relative abundance with Z-scores
+protein_zscore <- function(data, proteins, sample_patterns, group_means = FALSE) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "z_{col}"))
+
+    # Reshape data for ggplot
+    data_long <- data_zscore %>%
+      pivot_longer(
+        cols = starts_with("z_"), 
+        names_to = "Sample", 
+        values_to = "Abundance"
+      ) %>%
+      mutate(Sample = gsub("z_", "", Sample))  # Remove 'z_' prefix for clean sample names
+  }
+  
+  return(data_long)
+}
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+  
+```
+
+
+
+
+
+Check each contrast
+
+```{r}
+
+top_genes <- select_top_genes(filtered_DEP$`PINK1-KO`, n = 10)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.5, -0.25, 0, 1, 2, 4), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.5, -0.25, 0, 1, 2, 4), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+
+
+```
+
+```{r}
+
+# PINK1 DEP
+top_genes <- c("LMNA","DCN","HDGF","CA2","NEFL","NEFM","SYT2","STX1A")
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.9,-0.6,-0.2, 0, 2, 2.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PINK1.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.9,-0.6,-0.2, 0, 2, 2.5), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+```
+
+```{r}
+colnames(df)
+```
+
+
+
+SNCA-A53T
+
+```{r}
+top_genes <- select_top_genes(filtered_DEP$`SNCA-A53T`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "A53T"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "A53T"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2, 4), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "A53T"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 4), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+```
+GBA
+```{r}
+top_genes <- select_top_genes(filtered_DEP$`GBA-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "GBA.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "GBA.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "GBA.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+```
+Parkin  KO
+
+```{r}
+top_genes <- select_top_genes(filtered_DEP$`PRKN-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PRKN.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PRKN.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "PRKN.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+```
+
+For the dark genome gene expression levels I'll need the other dataframe
+
+```{r}
+
+abundance.dark <- read.csv("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_dark.csv")
+
+colnames(abundance.dark)
+
+df <- abundance.dark[, c(3,5:16,18:20)]
+df.dark <- abundance.dark[, c(3,5:16,18:20)]
+colnames(df)
+
+
+
+
+```
+
+
+```{r}
+top_genes <- select_top_genes(filtered_DEP$`IGSF9B-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5, -0.25,0, 1, 2, 3.5), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+```
+
+```{r}
+top_genes <- select_top_genes(filtered_DEP$`INPP5F-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "INPP5F.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "INPP5F.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.75, -0.5, -0.25,0, 1, 2, 4), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "INPP5F.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.75, -0.5, -0.25,0, 1, 2, 4), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+```
+
+
+```{r}
+
+top_genes <- select_top_genes(filtered_DEP$`IP6K2-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IP6K2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.75, -0.5, -0.25,0, 1, 2, 4), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.75, -0.5, -0.25,0, 1, 2, 4), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+
+
+```
+
+
+```{r}
+
+top_genes <- select_top_genes(filtered_DEP$`SH3GL2-KO`, n = 10)
+
+df.long <- protein_zscore(data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "SH3GL2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.6, -0.5,0.25, 0, 1, 3.8, 4.1), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = top_genes, # Example protein names
+  sample_patterns = c("Control", "SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-0.6, -0.5,0.25, 0, 1, 3.8, 4.1), # Adjust based on your data range
+  group_means = FALSE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+)
+
+
+```
+
+```{r}
+names(filtered_DEP)
+
+
+```
+
+
+# gene overlap
+
+```{r}
+
+library(UpSetR)
+
+
+# Extract gene lists for each comparison in filtered_DEP
+gene_lists <- lapply(filtered_DEP, function(df) unique(df$Symbol))
+
+# Name the lists according to the contrast names
+names(gene_lists) <- names(filtered_DEP)
+
+# Create a combined list of all unique genes
+all_genes <- unique(unlist(gene_lists))
+
+# Initialize a data frame to store binary presence/absence data
+gene_matrix <- data.frame(Symbol = all_genes)
+
+# Loop through each comparison and create binary columns
+for (contrast in names(gene_lists)) {
+  gene_matrix[[contrast]] <- as.numeric(gene_matrix$Symbol %in% gene_lists[[contrast]])
+}
+
+# Debug: Check the structure of the gene_matrix
+str(gene_matrix)
+
+
+# Create the UpSet plot
+upset(
+  gene_matrix,
+  sets = names(gene_lists),
+  sets.bar.color = "#56B4E9",
+  order.by = "freq",
+  empty.intersections = "on",
+  keep.order = TRUE
+)
+
+
+
+
+```
+
+Control the order 
+```{r}
+# Install UpSetR package if not already installed
+if (!requireNamespace("UpSetR", quietly = TRUE)) {
+  install.packages("UpSetR")
+}
+
+# Load the required libraries
+library(UpSetR)
+library(dplyr)
+
+create_upset_plot <- function(filtered_DEP, contrast_order, colors, text_scale = 1.5) {
+  # Ensure the length of colors matches the length of contrast_order
+  if (length(colors) != length(contrast_order)) {
+    stop("The length of the 'colors' vector must match the length of 'contrast_order'.")
+  }
+  
+  # Extract gene lists for each comparison in filtered_DEP
+  gene_lists <- lapply(filtered_DEP, function(df) unique(df$Symbol))
+  
+  # Name the lists according to the contrast names
+  names(gene_lists) <- names(filtered_DEP)
+  
+  # Create a combined list of all unique genes
+  all_genes <- unique(unlist(gene_lists))
+  
+  # Initialize a data frame to store binary presence/absence data
+  gene_matrix <- data.frame(Symbol = all_genes)
+  
+  # Loop through each comparison and create binary columns
+  for (contrast in names(gene_lists)) {
+    gene_matrix[[contrast]] <- as.numeric(gene_matrix$Symbol %in% gene_lists[[contrast]])
+  }
+  
+  # Reorder the gene_matrix columns to match the desired contrast order
+  gene_matrix <- gene_matrix %>%
+    dplyr::select(Symbol, all_of(contrast_order))
+
+  # Debug: Check the structure of the gene_matrix
+  print(str(gene_matrix))
+  
+  # Create the UpSet plot with custom colors
+  upset(
+    gene_matrix,
+    sets = contrast_order,  # Use the specified order for contrasts
+    sets.bar.color = colors, # Apply the specified colors in order
+    order.by = "freq",
+    empty.intersections = "on",
+    keep.order = TRUE,
+    text.scale = text_scale
+  )
+}
+
+
+colors <-c("#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f")
+
+# Example usage with specified contrast order
+contrast_order <- rev(c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", 
+                    "IGSF9B-KO","INPP5F-KO", "SH3GL2-KO","IP6K2-KO"))
+
+p <- create_upset_plot(filtered_DEP, contrast_order, colors = rev(colors), text_scale = 1.5)
+print(p)
+
+```
+
+```{r}
+png("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/UpsetplotBrightandDark.png", width = 1000, height = 500)
+p
+dev.off()
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/UpsetplotBrightandDark.pdf", width = 10, height = 5.5)
+p
+dev.off()
+
+```
+
+
+
+
+See which genes overlap - function 
+
+```{r}
+
+
+# Function to extract overlapping and unique genes
+get_gene_overlap_and_unique <- function(filtered_DEP, contrast_list) {
+  
+  # Check if all contrasts in contrast_list exist in filtered_DEP
+  missing_contrasts <- setdiff(contrast_list, names(filtered_DEP))
+  if (length(missing_contrasts) > 0) {
+    stop(paste("The following contrasts are not found in filtered_DEP:", paste(missing_contrasts, collapse = ", ")))
+  }
+
+  # Extract gene lists for each specified contrast
+  gene_lists <- lapply(contrast_list, function(contrast) unique(filtered_DEP[[contrast]]$Symbol))
+  names(gene_lists) <- contrast_list
+
+  # Find overlapping genes (common to all contrasts in the input list)
+  overlapping_genes <- Reduce(intersect, gene_lists)
+  
+  # Find unique genes for each contrast
+  unique_genes <- lapply(names(gene_lists), function(contrast) {
+    # Genes in the current contrast but not in any other contrast from the list
+    setdiff(gene_lists[[contrast]], unlist(gene_lists[names(gene_lists) != contrast]))
+  })
+  names(unique_genes) <- names(gene_lists)
+
+  # Create a list to store the results
+  result_list <- list(
+    "Overlapping Genes" = overlapping_genes,
+    "Unique Genes" = unique_genes
+  )
+  
+  return(result_list)
+}
+
+
+
+
+
+
+# bright genome overlap
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO","PRKN-KO") # Specify the contrasts of interest
+
+result.bright <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+# Print results
+print(result.bright$`Overlapping Genes`) # Genes common across all specified contrasts
+#print(result$`Unique Genes`) # List of genes unique to each contrast
+
+
+
+```
+
+Function isn't exactly correct need to fix
+
+
+```{r}
+
+pink.df <- filtered_DEP$`PINK1-KO`
+dim(pink.df)
+prkn.df <- filtered_DEP$`PRKN-KO`
+dim(prkn.df)
+intersect(pink.df$Accession, prkn.df$Accession)
+
+
+```
+```{r}
+# apply to filtered list
+regulation_summary <- summarize_regulations(filtered_DEP)
+print(regulation_summary)
+```
+
+```{r}
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO","PRKN-KO","IGSF9B-KO","INPP5F-KO","IP6K2-KO","IGSF9B-KO", "INPP5F-KO", "IP6K2-KO") # Specify the contrasts of interest
+
+all <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+print(all$`Overlapping Genes`)
+
+
+
+```
+
+
+```{r}
+names(filtered_DEP)
+```
+
+```{r}
+contrast_list <- c("GBA-KO", "PINK1-KO") # Specify the contrasts of interest
+
+gba.pink1 <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+print(gba.pink1)
+ # Genes common across all specified contrasts
+#print(result$`Unique Genes`) # List of genes unique to each contrast
+
+```
+
+
+
+
+```{r}
+# bright genome overlap
+contrast_list <- c("IGSF9B-KO", "INPP5F-KO","IP6K2-KO","SH3GL2-KO") # Specify the contrasts of interest
+
+result.dark <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+# Print results
+print(result.dark$`Overlapping Genes`) # Genes common across all specified contrasts
+#print(result.dark$`Unique Genes`) # List of genes unique to each contrast
+
+
+```
+
+Look at overlap in contrasts that also have targeted pathways changes that match
+
+
+```{r}
+
+# PRKN KO, IGSF9B and SH3GL2 all are down regulated in TH + levels
+contrast_list <- c("PRKN-KO","IGSF9B-KO","SH3GL2-KO") # Specify the contrasts of interest
+
+result.THdown <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+# Print results
+print(result.THdown$`Overlapping Genes`) # Genes common across all specified contrasts
+
+
+```
+
+```{r}
+
+df.long <- protein_zscore(data = df,
+  proteins = result.THdown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control","PRKN.KO","IGSF9B" ,"SH3GL2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = result.THdown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control","PRKN.KO","IGSF9B.KO" ,"SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2.5, 4.5), # Adjust based on your data range
+  group_means = TRUE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+) 
+
+
+
+
+```
+
+Function to plot grouped by expression
+
+
+```{r}
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(pheatmap)
+
+# Function to plot heatmap of relative abundance with Z-scores and clustering
+plot_clustered_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  }
+
+  # Create the heatmap with hierarchical clustering
+  pheatmap(
+    data_matrix,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    color = colorRampPalette(colors)(100),
+    na_col = na_color,
+    main = "Clustered Protein Abundance Heatmap (Z-Score)"
+  )
+}
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = result.THdown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values =c(-1, -0.5,-0.25, 0, 1, 2.5, 4.5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  ) 
+
+
+
+```
+```{r}
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(pheatmap)
+
+# Function to plot heatmap of relative abundance with Z-scores and clustering
+plot_clustered_protein_heatmap_zscore <- function(data, proteins, sample_patterns, colors, scale_values, na_color = "grey", group_means = FALSE, cell_width = 10, cell_height = 10) {
+  # Filter the data for selected proteins
+  data_filtered <- data %>%
+    filter(Symbol %in% proteins)
+  
+  # Set the order of the Symbol factor based on the input vector 'proteins'
+  data_filtered$Symbol <- factor(data_filtered$Symbol, levels = proteins)
+
+  # Identify sample columns matching patterns
+  sample_columns <- colnames(data_filtered)[sapply(colnames(data_filtered), function(col_name) {
+    any(sapply(sample_patterns, function(p) grepl(p, col_name)))
+  })]
+
+  # Debug: Check contents of sample_columns
+  print(paste("Sample columns selected:", paste(sample_columns, collapse = ", ")))
+
+  # Check if sample_columns has valid entries
+  if (length(sample_columns) == 0) {
+    stop("No sample columns matched the patterns provided.")
+  }
+
+  # Select only columns matching sample patterns and the Symbol column
+  data_filtered <- data_filtered %>%
+    dplyr::select(Symbol, all_of(sample_columns))
+
+  # Remove rows where all values are NA (excluding the Symbol column)
+  data_filtered <- data_filtered %>%
+    filter(rowSums(is.na(dplyr::select(., -Symbol))) < length(sample_columns))
+
+  if (group_means) {
+    # Group samples by the base name and calculate mean
+    sample_base <- gsub("\\.\\d+$", "", colnames(data_filtered)[-1])
+    data_grouped <- data_filtered %>%
+      pivot_longer(cols = -Symbol, names_to = "Sample", values_to = "Abundance") %>%
+      mutate(SampleBase = gsub("\\.\\d+$", "", Sample)) %>%
+      group_by(Symbol, SampleBase) %>%
+      summarize(Abundance = mean(Abundance, na.rm = TRUE), .groups = 'drop') %>%
+      pivot_wider(names_from = SampleBase, values_from = Abundance)
+
+    # Calculate Z-scores
+    data_zscore <- data_grouped %>%
+      mutate(across(-Symbol, ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  } else {
+    # Calculate Z-scores for each protein across the selected samples
+    data_zscore <- data_filtered %>%
+      mutate(across(all_of(sample_columns), ~ scale(.)[, 1], .names = "{col}"))
+
+    # Convert data to matrix form for pheatmap
+    data_matrix <- as.matrix(data_zscore[,-1])  # Exclude the Symbol column from matrix conversion
+    rownames(data_matrix) <- data_zscore$Symbol # Set row names to the Symbol column
+  }
+
+  # Create the heatmap with hierarchical clustering
+  pheatmap(
+    data_matrix,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    color = colorRampPalette(colors)(100),
+    na_col = na_color,
+    main = "Clustered Protein Abundance Heatmap (Z-Score)",
+    cellwidth = cell_width,   # Adjust cell width
+    cellheight = cell_height  # Adjust cell height
+  )
+}
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = result.THdown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2.5, 4.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = result.THdown$`Overlapping Genes`,  # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2.5, 4.5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+```
+
+
+```{r}
+contrast_list <- c("PRKN-KO","IGSF9B-KO","SH3GL2-KO", "IP6K2-KO") # Specify the contrasts of interest
+
+result.GCasedown <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+# Print results
+print(result.GCasedown$`Overlapping Genes`) # Genes common across all specified contrasts
+
+```
+
+
+
+Overlapping list of the genotypes with GCAse activity down: GBA-KO, PRNK-KO, INPP5F-KO, SH3GL2-KO, IP6K2-KO
+
+```{r}
+
+#colnames(df)
+
+df.long <- protein_zscore(data = df,
+  proteins = result.GCasedown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control","PRKN.KO","IGSF9B" ,"SH3GL2.KO","IP6K2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = result.GCasedown$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1.5, -1,-0.5, 0, 1,2, 2.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = result.GCasedown$`Overlapping Genes`,  # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1.5, -1,-0.5, 0, 1, 2, 2.5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+```
+
+```{r}
+contrast_list <- c("INPP5F-KO","SH3GL2-KO") # Specify the contrasts of interest
+
+result.lyso <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+# Print results
+print(result.lyso$`Overlapping Genes`) # Genes common across all specified contrasts
+
+df.long <- protein_zscore(data = df,
+  proteins = result.lyso$`Overlapping Genes`, # Example protein names
+  sample_patterns = c("Control","INPP5F" ,"SH3GL2"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+pro.list <- result.lyso$`Overlapping Genes`
+
+# list is too long
+
+
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = pro.list, # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.5,-0.25, 0, 2.5, 4.5, 6.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = pro.list,  # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-0.5,-0.25, 0, 2.5, 4.5, 6.5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+# list is too long
+```
+
+
+
+```{r}
+lysome <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/LYSOSOME_GENE LIST.xlsx")
+```
+
+```{r}
+
+```
+
+
+
+Gene list 
+
+```{r,fig.height=6}
+
+
+df.long <- protein_zscore(data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control","INPP5F.KO","IGSF9B.KO" ,"SH3GL2.KO","IP6K2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance)
+min(df.long$Abundance)
+
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control", "INPP5F.KO","IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1,-0.5, 0, 2.5,5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`,  # Example protein names
+  sample_patterns = c("Control", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1,-0.5, 0, 2.5,5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control","IGSF9B.KO","INPP5F.KO","SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2.5, 5.5), # Adjust based on your data range
+  group_means = TRUE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+) 
+
+
+
+
+plot_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control","INPP5F.KO","SH3GL2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1","red", "red2", "firebrick4"),
+  scale_values = c(-1, -0.5,-0.25, 0, 1, 2.5, 5.5), # Adjust based on your data range
+  group_means = TRUE,# Set to FALSE if you want individual samples
+   tile_width = 0.25
+) 
+
+
+
+
+
+```
+
+get overlap lists
+
+```{r}
+colnames(df)
+```
+
+
+
+
+```{r}
+contrast_list <- c("INPP5F-KO","SH3GL2-KO") # Specify the contrasts of interest
+
+result.lyso <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+print(result.lyso$`Overlapping Genes`)
+
+#write.csv(result.lyso$`Overlapping Genes`)
+
+
+contrast_list <- c("SNCA-A53T","PINK1-KO","PRKN-KO") # Specify the contrasts of interest
+a53.pink.parkin <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+
+
+
+contrast_list <- c("INPP5F-KO","SH3GL2-KO","IP6K2-KO","IGSF9B-KO") # Specify the contrasts of interest
+dark.ol <- get_gene_overlap_and_unique(filtered_DEP, contrast_list)
+
+print(dark.ol)
+
+print(a53.pink.parkin)
+
+filtered_DEP$`GBA-KO`
+
+
+df.gba <- filtered_DEP$`GBA-KO`
+
+df.inpp <- 
+
+```
+
+specify group function to get the specific overlap list in the upset plot
+
+
+```{r}
+
+# this code should get the genes overlapping in the contrast list and NOT found in the other contrasts
+
+# Function to extract genes overlapping in contrast_list but not in other contrasts
+get_specific_gene_overlap <- function(filtered_DEP, contrast_list) {
+  
+  # Check if all contrasts in contrast_list exist in filtered_DEP
+  missing_contrasts <- setdiff(contrast_list, names(filtered_DEP))
+  if (length(missing_contrasts) > 0) {
+    stop(paste("The following contrasts are not found in filtered_DEP:", paste(missing_contrasts, collapse = ", ")))
+  }
+
+  # Extract gene lists for contrasts in the contrast_list
+  gene_lists_included <- lapply(contrast_list, function(contrast) unique(filtered_DEP[[contrast]]$Symbol))
+  names(gene_lists_included) <- contrast_list
+
+  # Extract gene lists for contrasts not in the contrast_list
+  other_contrasts <- setdiff(names(filtered_DEP), contrast_list)
+  gene_lists_excluded <- lapply(other_contrasts, function(contrast) unique(filtered_DEP[[contrast]]$Symbol))
+
+  # Find overlapping genes among the specified contrasts in contrast_list
+  overlapping_genes_included <- Reduce(intersect, gene_lists_included)
+  
+  # Find genes that are in the excluded contrasts
+  genes_in_excluded <- unique(unlist(gene_lists_excluded))
+  
+  # Exclude genes that are in the excluded contrasts from the overlapping genes
+  final_genes <- setdiff(overlapping_genes_included, genes_in_excluded)
+  
+  return(final_genes)
+}
+
+# Example usage
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+
+# Print the result
+print(overlap_genes)
+
+length(overlap_genes) # 40 is the same lenght as the upset plot
+
+# Example usage
+contrast_list <- c("GBA-KO", "PINK1-KO", "PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+
+# Print the result
+print(overlap_genes)
+
+length(overlap_genes)
+
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/GBA_PINK1_PRKN_DPE.csv")
+
+
+```
+
+Make list corresponding to the upset plot to save and send to Roxanne 
+
+
+```{r}
+
+# pink parkin
+contrast_list <- c("PINK1-KO", "PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of PINK1 PRKN")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PINK1_PRKN_DPE.csv")
+print("saved")
+
+# PRKN IGSF9B
+contrast_list <- c("IGSF9B-KO", "PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B PRKN")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_PRKN_DPE.csv")
+print("saved")
+
+# IGSF9B pink parkin
+contrast_list <- c("PINK1-KO", "PRKN-KO", "IGSF9B-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B PINK1 PRKN")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_PINK1_PRKN_DPE.csv")
+print("saved")
+
+# PRKN IGSF9B
+contrast_list <- c("IGSF9B-KO", "PINK1-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B PINK1")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_PINK1_DPE.csv")
+print("saved")
+
+
+# INPP5F IGSF9B
+contrast_list <- c("IGSF9B-KO", "INPP5F-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B INPP5F")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_INPP5F_DPE.csv")
+print("saved")
+
+
+# INPP5F SH3GL2
+contrast_list <- c("SH3GL2-KO", "INPP5F-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SH3GL2 INPP5F")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SH3GL2_INPP5F_DPE.csv")
+print("saved")
+
+
+# SNCA A53T pink parkin
+contrast_list <- c("PINK1-KO", "PRKN-KO", "SNCA-A53T")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SNCA A53T PINK1 PRKN")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SNCAA53T_PINK1_PRKN_DPE.csv")
+print("saved")
+
+# bright genome and IGSF9B
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SNCA GBA PINK1 PRKN IGSF9B")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SNCAA53T_GBA_PINK1_PRKN_IGSF9B_DPE.csv")
+print("saved")
+
+
+
+# bright genome
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SNCA GBA PINK1 PRKN")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SNCAA53T_GBA_PINK1_PRKN_DPE.csv")
+print("saved")
+
+
+```
+
+```{r}
+
+
+contrast_list <- c("SH3GL2-KO", "INPP5F-KO","IGSF9B-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SH3GL2 INPP5F IGSF9B")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_INPP5F_SH3GL2_DPE.csv")
+print("saved")
+
+
+# IGSF9B pink parkin SNCA
+contrast_list <- c("PINK1-KO", "PRKN-KO", "IGSF9B-KO","SNCA-A53T")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B PINK1 PRKN SNCA-A53T")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SNCAA53T_IGSF9B_PINK1_PRKN_DPE.csv")
+print("saved")
+
+
+contrast_list <- c("PINK1-KO", "PRKN-KO", "IGSF9B-KO","GBA-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B PINK1 PRKN GBA")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/GBA_IGSF9B_PINK1_PRKN_DPE.csv")
+print("saved")
+
+
+
+
+```
+
+```{r}
+
+
+# A53T IGSF9B
+contrast_list <- c("IGSF9B-KO", "SNCA-A53T")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B SNCA A53T")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_SNCAA53T_DPE.csv")
+print("saved")
+
+# A53T IGSF9B
+contrast_list <- c("IGSF9B-KO", "SH3GL2-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B SH3GL2")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_SH3GL2_DPE.csv")
+print("saved")
+
+# A53T IGSF9B
+contrast_list <- c("IGSF9B-KO", "IP6K2-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IGSF9B IP6K")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_IP6K2_DPE.csv")
+print("saved")
+
+
+# A53T PINK1
+contrast_list <- c("PINK1-KO", "SNCA-A53T")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of PINK1KO SNCA A53T")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PINK1_SNCAA53T_DPE.csv")
+print("saved")
+
+
+# A53T PINK1 GBA
+contrast_list <- c("PINK1-KO", "SNCA-A53T","GBA-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of PINK1KO SNCA A53T and GBA")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PINK1_SNCAA53T_GBA_DPE.csv")
+print("saved")
+
+
+# A53T PINK1 IGSF9B
+contrast_list <- c("PINK1-KO", "SNCA-A53T","IGSF9B-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of PINK1KO SNCA A53T and IGSF9B")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PINK1_SNCAA53T_IGSF9B_DPE.csv")
+print("saved")
+
+# dark genome
+contrast_list <- c("SH3GL2-KO", "INPP5F-KO","IGSF9B-KO", "IP6K2-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of SH3GL2 INPP5F IGSF9B")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_INPP5F_SH3GL2_IP6K2_DPE.csv")
+print("saved")
+
+
+
+
+```
+
+Individual contrasts
+```{r}
+
+contrast_list <- c("SNCA-A53T")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to SNCA A53T")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SNCAA53T_DPE.csv")
+print("saved")
+
+contrast_list <- c("GBA-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to GBA KO")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/GBA_DPE.csv")
+print("saved")
+
+contrast_list <- c("PINK1-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to PINK1 KO")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PINK1_DPE.csv")
+print("saved")
+
+
+contrast_list <- c("PRKN-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to PRKN KO")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/PRKN_DPE.csv")
+print("saved")
+
+
+
+contrast_list <- c("IGSF9B-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to IGSF9B")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IGSF9B_DPE.csv")
+print("saved")
+
+contrast_list <- c("INPP5F-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to INPP5F")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/INPP5F_DPE.csv")
+print("saved")
+
+contrast_list <- c("SH3GL2-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Unique to SH3GL2")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/SH3GL2_DPE.csv")
+print("saved")
+
+contrast_list <- c("IP6K2-KO")
+overlap_genes <- get_specific_gene_overlap(filtered_DEP, contrast_list)
+# Print the result
+print("Overlap of IP6K2")
+print(overlap_genes)
+length(overlap_genes)
+write.csv(overlap_genes,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/OverlapLGeneLists/IP6K2_DPE.csv")
+print("saved")
+
+```
+
+
+Make one dataframe for expression lists
+
+```{r}
+# look at each abundance dataframe
+
+colnames(df.bright)
+colnames(df.dark)
+
+df <- merge(df.bright, df.dark, by.x = "Symbol", by.y = "Symbol")
+
+
+```
+
+
+Try some plots
+
+```{r, fig.height=5}
+
+
+
+df.long <- protein_zscore(data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control","A53T","GBA.KO","PINK1.KO","PRKN.KO","INPP5F.KO","IGSF9B.KO" ,"SH3GL2.KO","IP6K2.KO"), group_means = TRUE) 
+  
+max(df.long$Abundance, na.rm = TRUE)
+min(df.long$Abundance, na.rm = TRUE)
+
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`, # Example protein names
+  sample_patterns = c("Control", "A53T","GBA.KO","PINK1.KO","PRKN.KO","INPP5F.KO","IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1.5,-1,-0.5, 0, 2,4.5), # Adjust based on your data range
+  group_means = TRUE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+# Example usage
+heatmap_plot <- plot_clustered_protein_heatmap_zscore(
+  data = df,
+  proteins = lysome$`Gene name`,  # Example protein names
+  sample_patterns = c("Control.", "A53T.","GBA.KO","PINK1.KO","PRKN.KO","INPP5F.KO","IGSF9B.KO", "SH3GL2.KO","IP6K2.KO"),
+  colors = c("snow", "lightgoldenrod1", "gold1", "darkorange1", "red2", "firebrick4"),
+  scale_values = c(-1,-0.5, 0, 2.5,5), # Adjust based on your data range
+  group_means = FALSE, # Set to FALSE if you want individual samples
+  cell_width = 20, # Control column width
+  cell_height = 10 # Control row height
+)
+
+
+
+
+```
+
+Heat map of Logfold change
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot a heatmap of log-fold changes for selected samples and genes
+plot_logfold_change_heatmap <- function(filtered_DEP, gene_list, contrast_list, colors = c("blue", "white", "red"), remove_na_genes = FALSE) {
+  # Check if all contrasts in contrast_list exist in filtered_DEP
+  missing_contrasts <- setdiff(contrast_list, names(filtered_DEP))
+  if (length(missing_contrasts) > 0) {
+    stop(paste("The following contrasts are not found in filtered_DEP:", paste(missing_contrasts, collapse = ", ")))
+  }
+
+  # Filter data for the selected genes and contrasts
+  filtered_data <- filtered_DEP[contrast_list] %>%
+    lapply(function(df) {
+      df <- as.data.frame(df)  # Convert to a standard data frame
+      df %>% 
+        filter(Symbol %in% gene_list) %>% 
+        dplyr::select(Symbol, log2_ratio)  # Use dplyr::select to avoid conflicts
+    })
+
+  # Combine all filtered data into one data frame
+  combined_data <- bind_rows(filtered_data, .id = "Contrast")
+
+  # Pivot data to wide format for easier manipulation
+  data_wide <- combined_data %>%
+    pivot_wider(names_from = Contrast, values_from = log2_ratio) %>%
+    as.data.frame()  # Ensure it is a standard data frame
+
+  # If remove_na_genes is TRUE, filter out rows where all log2FC values are NA
+  if (remove_na_genes) {
+    data_wide <- data_wide %>%
+      filter(rowSums(is.na(dplyr::select(., -Symbol))) < (ncol(data_wide) - 1))
+  }
+
+  # Pivot data back to long format for ggplot
+  data_long <- data_wide %>%
+    pivot_longer(cols = -Symbol, names_to = "Contrast", values_to = "Log2FC")
+
+  # Calculate the maximum absolute value of Log2FC to set symmetric color limits
+  max_abs_log2fc <- max(abs(data_long$Log2FC), na.rm = TRUE)
+
+  # Create the heatmap using ggplot
+  heatmap_plot <- ggplot(data_long, aes(x = Contrast, y = Symbol, fill = Log2FC)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(
+      low = colors[1], mid = colors[2], high = colors[3], 
+      midpoint = 0, limits = c(-max_abs_log2fc, max_abs_log2fc), 
+      oob = scales::squish # ensures values outside the range are squished within the scale
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1),
+      aspect.ratio = length(unique(data_long$Symbol)) / length(unique(data_long$Contrast))
+    ) +
+    labs(title = "Log-Fold Change Heatmap", x = "Samples", y = "Genes")
+
+  return(heatmap_plot)
+}
+
+
+
+# Example usage
+# Define your gene list and contrasts of interest
+gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+# Call the function to create a heatmap
+heatmap_plot <- plot_logfold_change_heatmap(df_list, gene_list, contrast_list, remove_na_genes = TRUE)
+
+# Print the heatmap
+print(heatmap_plot)
+
+
+```
+
+Same function but controling keeping the gene list order
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to plot a heatmap of log-fold changes for selected samples and genes
+plot_logfold_change_heatmap_ordered <- function(filtered_DEP, gene_list, contrast_list, colors = c("blue", "white", "red"), remove_na_genes = FALSE) {
+  # Check if all contrasts in contrast_list exist in filtered_DEP
+  missing_contrasts <- setdiff(contrast_list, names(filtered_DEP))
+  if (length(missing_contrasts) > 0) {
+    stop(paste("The following contrasts are not found in filtered_DEP:", paste(missing_contrasts, collapse = ", ")))
+  }
+
+  # Filter data for the selected genes and contrasts
+  filtered_data <- filtered_DEP[contrast_list] %>%
+    lapply(function(df) {
+      df <- as.data.frame(df)  # Convert to a standard data frame
+      df %>% 
+        filter(Symbol %in% gene_list) %>% 
+        dplyr::select(Symbol, log2_ratio)  # Use dplyr::select to avoid conflicts
+    })
+
+  # Combine all filtered data into one data frame
+  combined_data <- bind_rows(filtered_data, .id = "Contrast")
+
+  # Pivot data to wide format for easier manipulation
+  data_wide <- combined_data %>%
+    pivot_wider(names_from = Contrast, values_from = log2_ratio) %>%
+    as.data.frame()  # Ensure it is a standard data frame
+
+  # If remove_na_genes is TRUE, filter out rows where all log2FC values are NA
+  if (remove_na_genes) {
+    data_wide <- data_wide %>%
+      filter(rowSums(is.na(dplyr::select(., -Symbol))) < (ncol(data_wide) - 1))
+  }
+
+  # Pivot data back to long format for ggplot
+  data_long <- data_wide %>%
+    pivot_longer(cols = -Symbol, names_to = "Contrast", values_to = "Log2FC")
+
+  # Set factor levels for genes and contrasts to maintain the specified order
+  data_long$Symbol <- factor(data_long$Symbol, levels = gene_list)
+  data_long$Contrast <- factor(data_long$Contrast, levels = contrast_list)
+
+  # Calculate the maximum absolute value of Log2FC to set symmetric color limits
+  max_abs_log2fc <- max(abs(data_long$Log2FC), na.rm = TRUE)
+
+  # Create the heatmap using ggplot
+  heatmap_plot <- ggplot(data_long, aes(x = Contrast, y = Symbol, fill = Log2FC)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(
+      low = colors[1], mid = colors[2], high = colors[3], 
+      midpoint = 0, limits = c(-max_abs_log2fc, max_abs_log2fc), 
+      oob = scales::squish # ensures values outside the range are squished within the scale
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      aspect.ratio = length(unique(data_long$Symbol)) / length(unique(data_long$Contrast))
+    ) +
+    labs(title = "Log-Fold Change Heatmap (Ordered)", x = "Samples", y = "Genes")
+
+  return(heatmap_plot)
+}
+
+# Example usage
+# Define your gene list and contrasts of interest
+gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+
+# Call the function to create a heatmap
+heatmap_plot_ordered <- plot_logfold_change_heatmap_ordered(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE)
+
+# Print the heatmap
+print(heatmap_plot_ordered)
+
+```
+
+Plot by dendrogram
+
+```{r}
+plot_logfold_change_heatmap_dendrogram <- function(df_list, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 0.8) {
+  # Filter the dataframes to include only the selected genes and contrasts
+  filtered_data <- df_list[contrast_list] %>% 
+    lapply(function(df) {
+      df %>% 
+        dplyr::filter(Symbol %in% gene_list) %>% 
+        dplyr::select(Symbol, log2_ratio)
+    }) %>% 
+    dplyr::bind_rows(.id = "Contrast")
+  
+  # Convert to a wide format for the heatmap
+  data_wide <- filtered_data %>%
+    tidyr::pivot_wider(names_from = Contrast, values_from = log2_ratio)
+  
+  # Optionally remove genes with all NA values across contrasts
+  if (remove_na_genes) {
+    data_wide <- data_wide %>%
+      dplyr::filter(rowSums(is.na(dplyr::select(., -Symbol))) < ncol(data_wide) - 1)
+  }
+  
+  # Convert Symbol to row names for the heatmap
+  data_wide <- data_wide %>%
+    tibble::column_to_rownames("Symbol")
+  
+  # Create a matrix for the heatmap
+  mat <- as.matrix(data_wide)
+  
+  # Determine the limits for the scale to be symmetric around zero
+  max_val <- max(abs(mat), na.rm = TRUE)
+  
+  # Plot the heatmap with dendrogram ordering
+  pheatmap::pheatmap(
+    mat,
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    color = colorRampPalette(c("blue", "white", "red"))(100),
+    breaks = seq(-max_val, max_val, length.out = 101),
+    cellwidth = column_width,
+    cellheight = column_width,
+    na_col = "grey",
+    scale = "none" # or you can use "row" or "column" if scaling is needed
+  )
+}
+
+
+p <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 10)
+print(p)
+
+
+
+```
+
+```{r, fig.height=5}
+
+
+# now plotted with function below
+
+gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1)
+print(p1)
+
+
+gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+p2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1)
+print(p2)
+
+gene_list <- lysome$`Gene name`
+contrast_list <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p3 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1)
+print(p3)
+
+
+gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1)
+print(p4)
+
+
+```
+
+
+```{r}
+
+
+gene_list <- lysome$`Gene name`
+contrast_list1 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list2 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+contrast_list3 <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list4 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_lysomeList_Log2FC_dendrogram.pdf", width = 6, height = 8)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Lysosome Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1,title = "Log Fold Change Lysosome Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list3, remove_na_genes = TRUE, column_width = 1,title = "Log Fold Change Lysosome Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list4, remove_na_genes = TRUE, column_width = 1,title = "Log Fold Change Lysosome Genes")
+dev.off()
+
+
+```
+
+get another gene list from Roxanne's list
+
+
+```{r}
+mitocarta <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/MitoCarta3.0.xlsx")
+
+mito.genes <- mitocarta$Symbol
+length(mito.genes)
+
+
+```
+
+Force 0 to be the center of the scale
+
+
+```{r}
+plot_logfold_change_heatmap_dendrogram <- function(df_list, gene_list, contrast_list, 
+                                                   remove_na_genes = FALSE, column_width = 0.8, title = "Log Fold Change") {
+  # Filter data to only include the specified genes and contrasts
+  filtered_data <- df_list[contrast_list] %>%
+    lapply(function(df) {
+      df %>% 
+        dplyr::filter(Symbol %in% gene_list) %>% 
+        dplyr::select(Symbol, log2_ratio)
+    }) %>% 
+    dplyr::bind_rows(.id = "Contrast")
+  
+  # Ensure only genes in gene_list that are found in the filtered data are kept
+  filtered_data <- filtered_data %>%
+    dplyr::filter(Symbol %in% unique(filtered_data$Symbol))
+  
+  # Handle duplicates by summarizing (e.g., taking the mean)
+  filtered_data <- filtered_data %>%
+    dplyr::group_by(Symbol, Contrast) %>%
+    dplyr::summarize(log2_ratio = mean(log2_ratio, na.rm = TRUE), .groups = 'drop')
+  
+  # Create a wide format matrix for heatmap plotting
+  data_wide <- filtered_data %>%
+    tidyr::pivot_wider(names_from = Contrast, values_from = log2_ratio) %>%
+    dplyr::filter(Symbol %in% gene_list) %>% # Ensure only genes in gene_list are kept
+    dplyr::mutate(dplyr::across(-Symbol, as.numeric))
+
+  # Optionally remove genes that are NA across all contrasts
+  if (remove_na_genes) {
+    data_wide <- data_wide %>%
+      dplyr::filter(rowSums(is.na(dplyr::select(., -Symbol))) < ncol(data_wide) - 1)
+  }
+
+  # Create a matrix for heatmap plotting
+  mat <- as.matrix(data_wide %>% dplyr::select(-Symbol))
+  rownames(mat) <- data_wide$Symbol
+  
+  # Check for NA, NaN, or Inf values in the matrix and remove any rows or columns that contain them
+  mat <- mat[complete.cases(mat), ]  # Remove rows with NA/NaN/Inf values
+  mat <- mat[, colSums(is.na(mat)) == 0]  # Remove columns with NA/NaN/Inf values
+  
+  # If after removing NA rows/columns the matrix becomes empty, return an informative error
+  if (nrow(mat) == 0 || ncol(mat) == 0) {
+    stop("The matrix is empty after removing rows/columns with NA/NaN/Inf values. No valid data to plot.")
+  }
+  
+  # Determine the limits for the scale to be symmetric around zero
+  max_val <- max(abs(mat), na.rm = TRUE)
+  
+  # Create the heatmap with dendrograms
+  pheatmap::pheatmap(mat, 
+                     cluster_rows = TRUE, 
+                     cluster_cols = TRUE, 
+                     scale = "none", 
+                     color = colorRampPalette(c("blue", "white", "red"))(50),
+                     breaks = seq(-max_val, max_val, length.out = 51), # Symmetric color scale
+                     cellwidth = column_width * 10, # Adjust column width
+                     show_rownames = TRUE,
+                     show_colnames = TRUE,
+                     main = title)
+}
+
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list = mitocarta$Symbol, contrast_list, 
+                                       remove_na_genes = TRUE, column_width = 1)
+
+
+
+```
+
+Gene different heatmaps
+
+```{r}
+gene_list <- mito.genes
+#gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+print(p1)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+p2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+print(p2)
+
+contrast_list <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+print(p3)
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+print(p4)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[1:100]
+p1.1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 1-100")
+p1.1 
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[101:200]
+p1.2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 101-200")
+p1.2
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[201:300]
+p1.3 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 201-300")
+p1.3
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[301:400]
+p1.4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 301-400")
+p1.4
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[401:600]
+p1.5 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 401-600")
+p1.5
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[601:800]
+p1.6 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 601-800")
+p1.6
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- mito.genes[801:1136]
+p1.7 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 801-1136")
+p1.7
+
+
+
+```
+
+Save mitocharta plots
+
+```{r}
+gene_list <- mito.genes
+contrast_list1 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list2 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+contrast_list3 <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list4 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+gene_list2 <- mito.genes[1:100]
+gene_list3 <- mito.genes[101:200]
+gene_list4 <- mito.genes[201:300]
+gene_list5 <- mito.genes[301:400]
+gene_list6 <- mito.genes[401:600]
+gene_list7 <- mito.genes[601:800]
+gene_list8 <- mito.genes[801:1136]
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_Mitocharta_Log2FC_dendrogram.pdf", height = 9, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes") # all 
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list2, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 1-100")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list3, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 101-200")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list4, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 201-300")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list5, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 301-400")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list6, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 401-600")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list7, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 601-800")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list8, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes 801-1136")
+# other contrasts
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list2, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list3, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list4, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Mitocarta Genes")
+dev.off()
+
+```
+
+
+
+
+Look at the gene list for PD
+
+```{r}
+pd.genes.list <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/PD gene list.xlsx", skip = 1)
+head(pd.genes.list)
+colnames(pd.genes.list) <- c("Symbol","Accession","Description","Ref","Species")
+head(pd.genes.list)
+pd.genes <- pd.genes.list$Symbol
+```
+
+
+
+
+```{r}
+
+gene_list <- pd.genes
+#gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+print(p1)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+p2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+print(p2)
+
+contrast_list <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+print(p3)
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+print(p4)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[1:50]
+p1.1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 1-50")
+p1.1 
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[50:100]
+p1.2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 50-100")
+p1.2
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[100:150]
+p1.3 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 100-150")
+p1.3
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[150:200]
+p1.4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 150-200")
+p1.4
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[200:250]
+p1.5 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 200-250")
+p1.5
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[250:300]
+p1.6 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 250-300")
+p1.6
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- pd.genes[300:330]
+p1.7 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 300-330")
+p1.7
+
+
+```
+
+```{r}
+
+gene_list <- pd.genes
+contrast_list1 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list2 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+contrast_list3 <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list4 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+gene_list2 <- pd.genes[1:50]
+gene_list3 <- pd.genes[50:100]
+gene_list4 <- pd.genes[100:150]
+gene_list5 <- pd.genes[150:200]
+gene_list6 <- pd.genes[200:250]
+gene_list7 <- pd.genes[250:300]
+gene_list8 <- pd.genes[300:330]
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_PD_genes_Log2FC_dendrogram.pdf", height = 6, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes") # all 
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list2, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 1-50")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list3, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 50-100")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list4, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 100-150")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list5, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 150-200")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list6, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 200-250")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list7, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 250-300")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list8, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes 300-330")
+# other contrasts
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list2, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list3, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list4, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes")
+dev.off()
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_PD_genes_Log2FC_dendrogramAllGenesAllLines.pdf", height = 20, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change PD Genes") 
+dev.off()
+
+```
+
+Read synapse list 
+
+```{r}
+synapse.genes.list <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/SYNAPSE_REDUCED_GENE_LIST.xlsx", col_names = FALSE)
+head(synapse.genes.list)
+colnames(synapse.genes.list) <- c("Symbol")
+head(synapse.genes.list)
+synapse.genes <- synapse.genes.list$Symbol
+```
+
+```{r}
+gene_list <- synapse.genes
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes")
+print(p1)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+p2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes")
+print(p2)
+
+contrast_list <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes")
+print(p3)
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes")
+print(p4)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[1:100]
+p1.1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 1-100")
+p1.1 
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[100:200]
+p1.2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 100-200")
+p1.2
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[200:300]
+p1.3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 200-300")
+p1.3
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[300:400]
+p1.4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 300-400")
+p1.4
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[400:500]
+p1.5 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 400-500")
+p1.5
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+gene_list <- synapse.genes[500:594]
+p1.6 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synapse Genes 500-594")
+p1.6
+
+```
+
+save the synaptic gene list
+
+```{r}
+gene_list <- synapse.genes
+
+contrast_list1 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list2 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+contrast_list3 <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list4 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+
+gene_list3 <- synapse.genes[1:100]
+gene_list4 <- synapse.genes[100:200]
+gene_list5 <- synapse.genes[200:300]
+gene_list6 <- synapse.genes[300:400]
+gene_list7 <- synapse.genes[400:500]
+gene_list8 <- synapse.genes[500:594]
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_Synpatic_genes_Log2FC_dendrogram.pdf", height = 6, width = 8)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes") # all 
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list3, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 1-100")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list4, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 100-200")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list5, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 200-300")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list6, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 300-400")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list7, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 400-500")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list8, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes 500-594")
+# other contrasts
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list2, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list3, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list4, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes")
+dev.off()
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_Synpatic_genes_Log2FC_dendrogramAllGenesAllLines.pdf", height = 20, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change Synaptic Genes") 
+dev.off()
+
+```
+
+
+```{r}
+
+brainD.genes.list <- read.csv("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/Brain Diseases - BrainBase - CNCB-NGDC.csv")
+head(brainD.genes.list)
+# cannot use - gene.symbol needs would need to be converted to Symbol and the list is long so it wouldn't be very useful
+# try with all and then filter differently
+
+
+
+
+```
+GWAS PD
+
+```{r}
+gwas.genes <- read.csv("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/ALL_PD_GWAS_GENELIST.csv")
+head(gwas.genes)
+
+
+```
+All gwas genes
+
+
+```{r}
+gene_list <- gwas.genes$hgnc_symbol
+#gene_list <- lysome$`Gene name`
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p1 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change All GWAS Genes")
+print(p1)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+p2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change All GWAS Genes")
+print(p2)
+
+contrast_list <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change All GWAS Genes")
+print(p3)
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+p4 <- p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change All GWAS Genes")
+print(p4)
+
+
+contrast_list <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+gene_list <- gwas.genes %>%
+  filter(distance_to_closest_snp == 0) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+  
+p1.1 <- p4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance = 0")
+p1.1 
+
+
+gene_list <- gwas.genes %>%
+  filter(distance_to_closest_snp < 10000 & distance_to_closest_snp > 0) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+
+
+print(gene_list)
+p1.2 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance > 0 and < 10000")
+p1.2
+
+gene_list <- gwas.genes %>%
+  filter(distance_to_closest_snp > 10000) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+
+p1.3 <-plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance > 10000")
+p1.3
+
+
+
+
+gene_list <- gwas.genes %>%
+  filter(distance_to_closest_snp < 10000) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+
+
+print(gene_list)
+p1.4 <- plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list, remove_na_genes = FALSE, column_width = 1, title = "Log Fold Change GWAS Genes with distance < 10000")
+p1.4
+
+
+```
+```{r}
+
+gene_list <- gwas.genes$hgnc_symbol
+
+contrast_list1 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO", "IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list2 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO")
+contrast_list3 <- c("IGSF9B-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+contrast_list4 <- c("SNCA-A53T", "GBA-KO", "PINK1-KO", "PRKN-KO","INPP5F-KO","SH3GL2-KO","IP6K2-KO")
+
+
+gene_list2 <- gwas.genes %>%
+  filter(distance_to_closest_snp == 0) %>%
+  pull(hgnc_symbol)
+
+gene_list3 <- gwas.genes %>%
+  filter(distance_to_closest_snp < 10000 & distance_to_closest_snp > 0) %>%
+  pull(hgnc_symbol)
+gene_list4 <- gwas.genes %>%
+  filter(distance_to_closest_snp > 10000) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+
+gene_list5 <- gwas.genes %>%
+  filter(distance_to_closest_snp < 10000) %>%
+  pull(hgnc_symbol)
+print(gene_list)
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_GWAS_genes_Log2FC_dendrogram.pdf", height = 8, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS all") # all 
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list2, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance = 0")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list3, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance  > 10000")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list4, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance > 0 and < 10000")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list5, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes with distance < 10000")
+
+
+# other contrasts
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list2, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list3, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes")
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list4, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes")
+dev.off()
+
+
+pdf("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/omics/HM_GWAS_genes_Log2FC_dendrogramAllGenesAllLines.pdf", height = 12, width = 6)
+plot_logfold_change_heatmap_dendrogram(df_list_numeric, gene_list, contrast_list1, remove_na_genes = TRUE, column_width = 1, title = "Log Fold Change GWAS Genes") 
+dev.off()
+
+
+
+
+```
+
+
+
+

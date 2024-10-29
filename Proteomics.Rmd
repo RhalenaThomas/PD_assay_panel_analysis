@@ -1,0 +1,740 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Proteomics analysis
+
+Proteomics - separate Bright and Dark
+	- Run Raw data - PCA (2 separate)
+	- DGE - results - plot volcanos : Thresholds to include: Log2FC > 0.5 and padjusted < 0.05
+	- Pathway analysis - 
+KEGG and GO all 
+Heatmap of pathways
+
+```{r}
+library(readxl)
+
+```
+```{r}
+df.bright <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/BrightGenome_TMT_2022_Roxanne_6_weeks.xlsx",col_names = TRUE)
+
+colnames(df.bright)
+
+```
+
+Separate out the normalized abundance data from the DPE analysis (Abundance ratio log2)
+
+```{r}
+bright.ab <- df.bright[, c(4, 21:36)]
+head(bright.ab)
+colnames(bright.ab)
+
+```
+Rename samples 
+All the samples are 6 weeks DA neurons from iPSC lines in the AIW002-02 background
+
+```{r}
+
+colnames(bright.ab) <- c("Protein","A53T-1","A53T-2","A53T-3","Control-1","Control-2","Control-3","GBA.KO-1","GBA.KO-2","GBA.KO-3","PINK1.KO-1","PINK1.KO-2","PINK1.KO-3","POOL","PRKN.KO-1","PRKN.KO-2","PRKN.KO-3")
+
+```
+
+
+Calculate and plot PCA - removing proteins with NA values
+
+```{r}
+# Step 1: Handle missing values
+# Remove rows with any NA values
+df_clean <- na.omit(bright.ab)
+
+# We go from 4111 proteins to 1876 
+
+# make the protein column in to the row names
+rownames(df_clean) <- df_clean$Protein
+df_clean <- df_clean[, 2:17]
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t <- t(df_clean)
+
+# Step 3: Perform PCA
+pca_result <- prcomp(df_t, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores <- as.data.frame(pca_result$x)
+
+# Step 5: Plot the PCA
+plot(pca_scores$PC1, pca_scores$PC2,
+     xlab = "PC1",
+     ylab = "PC2",
+     main = "PCA Plot",
+     pch = 19, # Solid circles
+     col = "blue") # Color of the points
+
+
+
+```
+
+```{r}
+rownames(pca_scores)
+```
+Plot coloured by samples
+
+```{r}
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores)
+sample_groups <- gsub("-.*", "", sample_names)
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores$Group <- factor(sample_groups, levels = c("Control", "A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "POOL"))
+
+# Step 3: Plot using ggplot2
+library(ggplot2)
+
+# take colours from Roxanne's plots: control = black, A53T = pink, GBA = teal green, pink1ko - dark purple, prknko = light purple
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","grey")
+
+ggplot(pca_scores, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright Genome", x = "PC1", y = "PC2") +
+  scale_color_manual(values = custom_colours)+
+  theme_minimal() +
+  theme(legend.title = "iPSC Line")  # Removes legend title if you don't want one
+
+```
+
+Repeat for the Dark genome
+
+
+```{r}
+df.dark <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/DarkGenome_TMT_March2024_6_weeks_refractionated_complete.xlsx",col_names = TRUE)
+
+colnames(df.dark)
+
+```
+
+```{r}
+dark.ab <- df.dark[, c(4, 38:53)]
+colnames(dark.ab)
+
+#dark.ab[1:5,15:17]
+
+```
+
+
+Rename samples 
+All the samples are 6 weeks DA neurons from iPSC lines in the AIW002-02 background
+
+```{r}
+
+colnames(dark.ab) <- c("Protein","Control-1",
+                       "Control-2","Control-3",
+                       "Control-4","IGSF9B.KO-1",
+                       "IGSF9B.KO-2","INPP5F.KO-1",
+                       "INPP5F.KO-2","INPP5F.KO-3",
+                       "IP6K2.KO-1","IP6K2.KO-2",
+                       "IP6K2.KO-4","POOL",
+                       "SH3GL2.KO-1","SH3GL2.KO-2","SH3GL2.KO-3")
+
+
+
+# Step 1: Handle missing values
+# Remove rows with any NA values
+df_clean2 <- na.omit(dark.ab)
+
+# We go from 4111 proteins to 1876 
+
+# make the protein column in to the row names
+rownames(df_clean2) <- df_clean2$Protein
+df_clean2 <- df_clean2[, 2:17]
+
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t2 <- t(df_clean2)
+
+# Step 3: Perform PCA
+pca_result2 <- prcomp(df_t2, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores2 <- as.data.frame(pca_result2$x)
+
+# Step 5: Plot the PCA
+plot(pca_scores2$PC1, pca_scores2$PC2,
+     xlab = "PC1",
+     ylab = "PC2",
+     main = "PCA Plot",
+     pch = 19, # Solid circles
+     col = "blue") # Color of the points
+
+
+
+```
+```{r}
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores2)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores2$Group <- factor(sample_groups, levels = c("Control", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores2, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Dark Genome", x = "PC1", y = "PC2") +
+  scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+
+```
+
+
+How does it look if I combine the data?
+
+```{r}
+
+# Assuming df1 and df2 are your dataframes
+
+# Perform a full join on the "Protein" column
+df_joined <- merge(bright.ab, dark.ab, by = "Protein", all = TRUE)
+colnames(df_joined)
+
+```
+
+
+```{r}
+
+df_clean_all <- na.omit(df_joined)
+
+# We go from 6352 to 1338
+
+# make the protein column in to the row names
+rownames(df_clean_all) <- df_clean_all$Protein
+
+
+# remove the Protein column 
+rownames(df_clean_all) <- df_clean_all$Protein
+df_clean_all <- df_clean_all[, 2:33]
+
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t3 <- t(df_clean_all)
+
+# Step 3: Perform PCA
+pca_result3 <- prcomp(df_t3, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores3 <- as.data.frame(pca_result3$x)
+
+
+```
+
+
+```{r}
+
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores3)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores3$Group <- factor(sample_groups, levels = c("Control","A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores3, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright and  Dark Genome", x = "PC1", y = "PC2") +
+ # scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+
+
+```
+
+Try some quick normalization
+
+```{r}
+median_centered_df <- df_clean_all
+for (i in 2:ncol(df_clean_all)) {
+  median_centered_df[, i] <- df_clean_all[, i] - median(df_clean_all[, i], na.rm = TRUE)
+}
+
+
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t3 <- t(median_centered_df)
+
+# Step 3: Perform PCA
+pca_result3 <- prcomp(df_t3, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores3 <- as.data.frame(pca_result3$x)
+
+
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores3)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores3$Group <- factor(sample_groups, levels = c("Control","A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores3, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright and  Dark Genome", x = "PC1", y = "PC2") +
+ scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+
+```
+```{r}
+
+normalized_df <- as.data.frame(scale(df_clean_all[, -1]))
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t3 <- t(normalized_df)
+
+# Step 3: Perform PCA
+pca_result3 <- prcomp(df_t3, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores3 <- as.data.frame(pca_result3$x)
+
+
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores3)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores3$Group <- factor(sample_groups, levels = c("Control","A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores3, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright and  Dark Genome", x = "PC1", y = "PC2") +
+ scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+
+```
+
+```{r}
+
+# Apply log transformation (e.g., log2) to the combined dataframe
+log_df <- df_clean_all
+log_df[, -1] <- log2(log_df[, -1] + 1)  # Adding 1 to avoid log(0) issues
+
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t3 <- t(log_df)
+
+# Step 3: Perform PCA
+pca_result3 <- prcomp(df_t3, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores3 <- as.data.frame(pca_result3$x)
+
+
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores3)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores3$Group <- factor(sample_groups, levels = c("Control","A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores3, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright and  Dark Genome", x = "PC1", y = "PC2") +
+ scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+```
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("preprocessCore")
+
+library(preprocessCore)
+
+# Convert the data to a matrix
+data_matrix <- as.matrix(df_clean_all)
+
+# Perform quantile normalization
+normalized_matrix <- normalize.quantiles(data_matrix)
+# check if there are row and column names
+rownames(normalized_matrix)
+colnames(normalized_matrix)
+
+
+# Step 2: Transpose the data so that rows are samples and columns are proteins
+df_t3 <- t(log_df)
+
+# Step 3: Perform PCA
+pca_result3 <- prcomp(df_t3, scale. = TRUE)
+
+# Step 4: Extract the PCA scores for the first two dimensions
+pca_scores3 <- as.data.frame(pca_result3$x)
+
+
+# Step 1: Extract group information from row names
+# Assuming row names are in the format "Group-Sample" (e.g., "A53T-1", "Control-1")
+sample_names <- rownames(pca_scores3)
+sample_groups <- gsub("-.*", "", sample_names)
+
+
+
+# Step 2: Add the group information to the PCA scores dataframe
+pca_scores3$Group <- factor(sample_groups, levels = c("Control","A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "INPP5F.KO", "IGSF9B.KO", "SH3GL2.KO","IP6K2.KO", "POOL"))
+
+
+# take colours from Roxanne's plots: c("Control"= black, "INPP5F.KO" = Purple pinkish, "IGSF9B.KO" = green, "SH3GL2.KO" = red,"IP6K2.KO" = dark blue, "POOL"))
+# green "#5c9e4b",
+custom_colours <- c("black","#d34a98","#439472","#5c1c97","#9e69cf","#931ea0","#148825","#db072f","#111e8f","grey")
+
+ggplot(pca_scores3, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 3) +
+  labs(title = "Protein Abundance - Bright and  Dark Genome", x = "PC1", y = "PC2") +
+ scale_color_manual(values = custom_colours)+
+  theme_minimal() 
+
+```
+
+Heat map of expression for selected pathway lists:
+
+Get pathway lists
+
+```{r}
+
+lyso.list <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/List of genes for RNAseq or Proteomics/LYSOSOME_GENE LIST.xlsx")
+
+
+```
+
+
+Plotting Function
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+plot_heatmap <- function(data, protein_list, sample_groups, group_colors, protein_col = "Protein") {
+  
+  # Check if protein_col is present in the data
+  if (!(protein_col %in% colnames(data))) {
+    stop("Specified protein column not found in the data.")
+  }
+
+  # Extract sample columns
+  sample_cols <- colnames(data)[!(colnames(data) %in% c(protein_col))]
+  
+  # Convert wide data to long format
+  long_data <- data %>%
+    pivot_longer(cols = all_of(sample_cols), names_to = "Sample", values_to = "Expression") %>%
+    mutate(Group = factor(gsub("-.*", "", Sample), levels = sample_groups))
+
+  # Filter for specified proteins
+  filtered_data <- long_data %>%
+    filter(!!sym(protein_col) %in% protein_list)
+  
+  # Calculate the mean expression per group for each protein
+  mean_expression <- filtered_data %>%
+    group_by(!!sym(protein_col), Group) %>%
+    summarise(MeanExpression = mean(Expression, na.rm = TRUE), .groups = 'drop') %>%
+    pivot_wider(names_from = Group, values_from = MeanExpression)
+  
+  # Reshape for plotting
+  plot_data <- mean_expression %>%
+    pivot_longer(cols = -!!sym(protein_col), names_to = "Group", values_to = "Expression")
+  
+  # Plot the heatmap
+  ggplot(plot_data, aes(x = Group, y = !!sym(protein_col), fill = Expression)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white", na.value = "grey50", 
+                         midpoint = 0, limits = c(min(plot_data$Expression, na.rm = TRUE),
+                                                  max(plot_data$Expression, na.rm = TRUE))) +
+    labs(title = "Heatmap of Normalized Expression", x = "Sample Group", y = "Protein") +
+    scale_x_discrete(limits = sample_groups) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "bottom")
+}
+
+# Example usage:
+# Assuming df is your data with columns for proteins and samples
+# and you want to plot heatmap for specified proteins and sample groups.
+# Group colors should match the sample groups in the order they appear in the sample_names.
+group_colors <- c("Control" = "black", "A53T" = "#931ea0", "GBA.KO" = "#148825", 
+                  "PINK1.KO" = "#db072f", "PRKN.KO" = "#111e8f", "POOL" = "grey")
+
+
+# call the function 
+
+lyso.list$`Gene name`
+
+df <- bright.ab
+
+
+df <- df %>% select(-POOL)
+colnames(df)
+
+
+plot_heatmap(df, protein_list = lyso.list$`Gene name`, sample_groups = c("Control", "A53T", "GBA.KO", "PINK1.KO", "PRKN.KO", "POOL"), group_colors = group_colors)
+
+
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+plot_heatmap <- function(data, protein_list, sample_groups, group_colors, protein_col = "Protein") {
+  
+  # Check if protein_col is present in the data
+  if (!(protein_col %in% colnames(data))) {
+    stop("Specified protein column not found in the data.")
+  }
+  
+  # Extract sample columns
+  sample_cols <- colnames(data)[!(colnames(data) %in% protein_col)]
+  
+  # Convert wide data to long format and add group information
+  long_data <- data %>%
+    pivot_longer(cols = all_of(sample_cols), names_to = "Sample", values_to = "Expression") %>%
+    mutate(Group = factor(gsub("-.*", "", Sample), levels = sample_groups))
+  
+  # Check if the Group column was successfully created
+  if (!"Group" %in% colnames(long_data)) {
+    stop("Group column could not be created. Check your sample column names and provided sample_groups.")
+  }
+  
+  # Filter for specified proteins
+  filtered_data <- long_data %>%
+    filter(!!sym(protein_col) %in% protein_list)
+  
+  # Calculate the mean expression per group for each protein
+  mean_expression <- filtered_data %>%
+    group_by(!!sym(protein_col), Group) %>%
+    summarise(MeanExpression = mean(Expression, na.rm = TRUE), .groups = 'drop') %>%
+    pivot_wider(names_from = Group, values_from = MeanExpression)
+  
+  # Check if the mean_expression dataframe is correctly created
+  if (ncol(mean_expression) <= 1) {
+    stop("No data to plot. Check the input proteins and sample groups.")
+  }
+  
+  # Reshape for plotting
+  plot_data <- mean_expression %>%
+    pivot_longer(cols = -!!sym(protein_col), names_to = "Group", values_to = "Expression")
+  
+  # Plot the heatmap
+  ggplot(plot_data, aes(x = Group, y = !!sym(protein_col), fill = Expression)) +
+    geom_tile(color = "white") +
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white", na.value = "grey50", 
+                         midpoint = 0, limits = c(min(plot_data$Expression, na.rm = TRUE),
+                                                  max(plot_data$Expression, na.rm = TRUE))) +
+    labs(title = "Heatmap of Normalized Expression", x = "Sample Group", y = "Protein") +
+    scale_x_discrete(limits = sample_groups) +
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white", na.value = "grey", 
+                         midpoint = 0, limits = c(min(plot_data$Expression, na.rm = TRUE),
+                                                  max(plot_data$Expression, na.rm = TRUE))) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "bottom")
+}
+
+# Example usage:
+# Assuming df is your data with columns for proteins and samples
+# and you want to plot heatmap for specified proteins and sample groups.
+group_colors <- c("Control" = "black", "A53T" = "#931ea0", "GBA.KO" = "#148825", 
+                  "PINK1.KO" = "#db072f", "PRKN.KO" = "#111e8f", "POOL" = "grey")
+
+plot_heatmap(df, protein_list = lyso.list$`Gene name`, sample_groups = c("Control", "A53T", "GBA.KO", "PINK1.KO", "PRKN.KO"), group_colors = group_colors)
+
+# now the problem is in the protein list 
+# see some proteins
+bright.ab[1:10,1]
+
+test <- c("Q9Y276","H0YMG7","P46821")
+
+plot_heatmap(df, protein_list = test, sample_groups = c("Control", "A53T", "GBA.KO", "PINK1.KO", "PRKN.KO"), group_colors = group_colors)
+
+```
+
+
+We need to convert the access numbers into protein/gene names
+
+```{r}
+install.packages("BiocManager")
+BiocManager::install("biomaRt")
+library(biomaRt)
+
+```
+
+```{r}
+library(biomaRt)
+
+# Connect to Ensembl database
+ensembl <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Convert accession numbers in chunks
+convert_accessions_in_chunks <- function(accessions, chunk_size = 1000) {
+  results <- lapply(seq(1, length(accessions), by = chunk_size), function(i) {
+    chunk <- accessions[i:min(i + chunk_size - 1, length(accessions))]
+    getBM(attributes = c('uniprot_swissprot_accession', 'external_gene_name'),
+          filters = 'uniprot_swissprot_accession',
+          values = chunk,
+          mart = ensembl)
+  })
+  do.call(rbind, results)
+}
+
+# Example usage
+accessions <- c("A0A0B4J2D5", "A0AVT1", "A0MZ66", "A1L0T0", "A1X283", "A6NKG5", "O00116", "O00151", "O00154", "O00193")
+converted <- convert_accessions_in_chunks(accessions)
+print(converted)
+
+```
+
+
+Try another converion method
+
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("mygene")
+library(mygene)
+
+# Convert Uniprot accessions to gene names
+accessions <- c("A0A0B4J2D5", "A0AVT1", "A0MZ66", "A1L0T0", "A1X283", "A6NKG5", "O00116", "O00151", "O00154", "O00193")
+
+# Query using mygene
+result <- queryMany(accessions, scopes = "uniprot", fields = c("symbol"), species = "human")
+
+# Check the result
+print(result)
+
+```
+
+# convert protein accession numbers into symbols
+
+```{r}
+
+accessions = bright.ab$Protein
+# Query using mygene
+result <- queryMany(accessions, scopes = "uniprot", fields = c("symbol"), species = "human")
+
+# Check the results
+
+names.df <- as.data.frame(result)
+head(names.df)
+
+length(accessions)
+dim(names.df)
+
+```
+
+Now add into the dataframe
+
+```{r}
+
+
+
+# Merge dataframes
+bright.ab <- merge(bright.ab, names.df, by.x = "Protein", by.y = "query", all.x = TRUE)
+
+# Rename the column if necessary
+#colnames(bright.ab)[which(colnames(bright.ab) == "symbol")] <- "Symbols"
+
+# Display the updated dataframe
+#print(bright.ab)
+
+colnames(bright.ab)
+
+# remove the extra columns 
+bright.ab <- bright.ab[, -c(14,18,19,21)]
+
+
+colnames(bright.ab)
+
+```
+
+# Plot lists
+
+```{r}
+
+df <- data.frame(bright.ab$symbol,bright.ab[,2:16])
+colnames(df)
+colnames(df) <- c("symbol","A53T-1",  "A53T-2","A53T-3","Control-1", "Control-2",  "Control-3", "GBA.KO-1","GBA.KO-2",  "GBA.KO-3", "PINK1.KO-1",  "PINK1.KO-2",  "PINK1.KO-3", "PRKN.KO-1", "PRKN.KO-2",   "PRKN.KO-3" )
+
+plot_heatmap(df, protein_list = lyso.list$`Gene name`, sample_groups = c("Control", "A53T", "GBA.KO", "PINK1.KO", "PRKN.KO"), group_colors = group_colors,protein_col = "symbol")
+
+
+
+```
+
+Update plotting function
+
+```{r}
+
+
+
+```
+
+
+
+
+
+Look at the Differential gene expression 
+
+
+
+
+
+
+
+

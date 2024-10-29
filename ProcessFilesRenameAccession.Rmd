@@ -1,0 +1,278 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Protein 
+- process to add SYMBOL NAMES 
+-  
+
+
+```{r}
+library(readxl)
+library(dplyr)
+
+```
+
+
+Read in the files
+
+```{r}
+
+df.bright <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/BrightGenome_TMT_2022_Roxanne_6_weeks.xlsx",col_names = TRUE)
+
+colnames(df.bright)
+```
+
+
+Convert Accession numbers to SYMBOLS
+
+```{r}
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install("mygene")
+
+#library(mygene)
+
+# Query using mygene
+
+accessions <- df.bright$Accession
+result <- queryMany(accessions, scopes = "uniprot", fields = c("symbol"), species = "human", returnall = FALSE)
+names.df <- as.data.frame(result)
+
+dim(names.df)
+dim(df.bright)
+
+# extra values are added in the conversion
+# add the values back into the dataframe matching Accession and query
+
+df1 <- df.bright
+
+# Merge df1 and names.df by Accession and query, keeping all rows from df1
+merged_df <- merge(df1, names.df[, c("query", "symbol")], by.x = "Accession", by.y = "query", all.x = TRUE)
+
+# Create a new column "Symbol" in df1 based on the merged results
+merged_df <- merged_df %>%
+  mutate(Symbol = ifelse(is.na(symbol), Accession, symbol))
+
+
+colnames(merged_df)
+
+```
+
+Selected the desired columns for saving further analysis
+
+Logfold change and pvalues for each line vs control 
+
+```{r}
+
+df.dpe <- merged_df[, c(1,38,5:19)]
+colnames(df.dpe)
+
+```
+
+```{r}
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsDifferentialAbundance_bright_all.csv")  
+
+# make files for each gene vs control DPE  /DPE_files
+```
+
+
+All samples here are 6 weeks DA neurons
+
+```{r}
+#a53t
+df.t <- df.dpe[, c(1:3,4,8)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/SNCA-A53T_ProtomicsDifferentialAbundance.csv")
+
+#GBA
+df.t <- df.dpe[, c(1:3,5,9)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/GBA-KO_ProtomicsDifferentialAbundance.csv")
+
+#PINK1
+df.t <- df.dpe[, c(1:3,6,10)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/PINK1-KO_ProtomicsDifferentialAbundance.csv")
+
+#Parkin
+df.t <- df.dpe[, c(1:3,7,11)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/PRKN-KO_ProtomicsDifferentialAbundance.csv")
+
+
+
+```
+
+Abundance
+```{r}
+df <- merged_df[, c(1,38,5,21:36)]
+colnames(df)
+
+```
+
+Rename columns
+
+```{r}
+colnames(df) <-  c("Accession","Symbol","Description","A53T-1","A53T-2","A53T-3","Control-1","Control-2","Control-3","GBA.KO-1","GBA.KO-2","GBA.KO-3","PINK1.KO-1","PINK1.KO-2","PINK1.KO-3","POOL","PRKN.KO-1","PRKN.KO-2","PRKN.KO-3")
+
+colnames(df)
+```
+
+Save abundance values renamed as a csv
+
+```{r}
+
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_bright.csv")
+
+```
+
+
+# Dark genome data
+
+
+Read in the files
+
+```{r}
+
+df.dark <- read_excel("/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/FromRoxanneProteomics/Files/DarkGenome_TMT_March2024_6_weeks_refractionated_complete.xlsx",col_names = TRUE)
+
+colnames(df.dark)
+```
+
+
+Convert Accession numbers to SYMBOLS
+
+```{r}
+#if (!require("BiocManager", quietly = TRUE))
+#    install.packages("BiocManager")
+#BiocManager::install("mygene")
+
+#library(mygene)
+
+# Query using mygene
+
+accessions <- df.dark$Accession
+result <- queryMany(accessions, scopes = "uniprot", fields = c("symbol"), species = "human", returnall = FALSE)
+names.df <- as.data.frame(result)
+
+dim(names.df)
+dim(df.dark)
+
+# extra values are added in the conversion
+# add the values back into the dataframe matching Accession and query
+
+df1 <- df.dark
+
+# Merge df1 and names.df by Accession and query, keeping all rows from df1
+merged_df <- merge(df1, names.df[, c("query", "symbol")], by.x = "Accession", by.y = "query", all.x = TRUE)
+
+# Create a new column "Symbol" in df1 based on the merged results
+merged_df <- merged_df %>%
+  mutate(Symbol = ifelse(is.na(symbol), Accession, symbol))
+
+
+colnames(merged_df)
+
+```
+
+
+Selected the desired columns for saving further analysis
+
+Logfold change and pvalues for each line vs control 
+
+```{r}
+
+df.dpe <- merged_df[, c(1,55,5:19)]
+colnames(df.dpe)
+
+```
+
+```{r}
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsDifferentialAbundance_Dark_all.csv")  
+
+# make files for each gene vs control DPE  /DPE_files
+```
+
+
+All samples here are 6 weeks DA neurons
+
+```{r}
+#IGSF9B
+df.t <- df.dpe[, c(1:3,4,8)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/IGSF9B-KO_ProtomicsDifferentialAbundance.csv")
+
+#INPP5F
+df.t <- df.dpe[, c(1:3,5,9)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/INPP5F-KO_ProtomicsDifferentialAbundance.csv")
+
+#IP6K2
+df.t <- df.dpe[, c(1:3,6,10)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/IP6K2-KO_ProtomicsDifferentialAbundance.csv")
+
+#SH3GL2
+df.t <- df.dpe[, c(1:3,7,11)]
+colnames(df.t)
+colnames(df.t) <- c("Accession","Symbol","Description","log2_ratio","p-value")
+head(df.t)
+write.csv(df.t,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/DPE_files/SH3GL2-KO_ProtomicsDifferentialAbundance.csv")
+
+
+
+```
+
+
+Abundance
+```{r}
+df <- merged_df[, c(1,55,5,38:53)]
+colnames(df)
+
+```
+
+Rename columns
+
+```{r}
+
+dark.ab <- c("Accession","Symbol","Description","Control-1",
+                       "Control-2","Control-3",
+                       "Control-4","IGSF9B.KO-1",
+                       "IGSF9B.KO-2","INPP5F.KO-1",
+                       "INPP5F.KO-2","INPP5F.KO-3",
+                       "IP6K2.KO-1","IP6K2.KO-2",
+                       "IP6K2.KO-4","POOL",
+                       "SH3GL2.KO-1","SH3GL2.KO-2","SH3GL2.KO-3")
+
+colnames(df) <-dark.ab
+colnames(df)
+```
+
+Save abundance values renamed as a csv
+
+```{r}
+
+write.csv(df,"/Users/rhalenathomas/Downloads/Move_Data/DarkGenomeResult/ProtomicsNormGeneAbundance_dark.csv")
+
+```
+
+
+
+
