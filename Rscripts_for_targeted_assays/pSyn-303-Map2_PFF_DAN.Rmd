@@ -1,0 +1,425 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r warning = FALSE}
+# Load packages and data
+library(tidyverse)
+library(here)
+library(dplyr)
+library(RColorBrewer)
+library(gridExtra)
+library(ggpubr)
+library(rstatix)
+library(knitr)
+
+IF_named <- read.csv("/Users/roxannelariviere/Desktop/Dark genome/Results/GWAS/OPERA IF/Batch4/1-03-2024-GWAS-pSyn488-303647-Map2555-PFF19K11[21886].csv")
+
+
+IF_named$Treatment <- factor(IF_named$Treatment, levels = c("Vehicle", "PFF"))
+```
+
+```{r}
+IF_named <- IF_named %>% filter(Stain == "pSyn/303/Map2")
+```
+
+```{r}
+# Remove Fields and Wells with low object counts:
+# Minimal filtration applied to include Parkin and PINK1 wells where many cells detached at later timepoints
+Cell_density <- IF_named %>%
+        group_by(Identifier, Genotype) %>%
+        summarise(Count = length(Nuclei_area),
+                  Nucleus_shape = mean(Nuclei_roundness),
+                  Nucleus_area = mean(Nuclei_area))
+
+Wells_to_remove <- Cell_density %>%
+  filter(Nucleus_shape <= 0.3)
+
+Wells_to_remove <- Wells_to_remove$Identifier
+
+IF_named <- IF_named %>%
+  filter(!Identifier %in% Wells_to_remove)
+
+```
+
+
+```{r}
+# Calculate total cell density per image
+# Image dimensions at 20X with water immersion lens are 625um x 625um --> 390,625 square microns
+
+Cell_density <- IF_named %>%
+        group_by(Identifier, Genotype, Field, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pSyn = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_303 = mean(A647))
+
+ggplot(Cell_density, aes(y=Count, x = Genotype))+
+   facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Number of Cells per Field", x = "", title="Cells per Field")
+
+ggplot(Cell_density, aes(y=Cell_Size, x = Genotype))+
+   facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        scale_y_log10()+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Average Cell Size per Field", x = "", title="Cell Size")
+
+ggplot(Cell_density, aes(y=Mean_pSyn, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="pSyn Expression", x = "", title="pSyn Expression")
+
+ggplot(Cell_density, aes(y=Mean_303, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="303 Expression", x = "", title="303 Expression")
+
+
+```
+
+
+
+```{r fig.width = 8, fig.height = 5}
+
+ggplot(IF_named, aes(y=A555, x=Nuclei_roundness, color=A555))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+        scale_color_gradient(high = "red", low = "navy")+
+        facet_grid(.~Treatment)+
+  geom_hline(yintercept = 300)+
+  geom_vline(xintercept = 0.85)+
+        theme_classic(base_size = 12)+
+         theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))
+
+
+ggplot(IF_named, aes(y=A555, x=Nuclei_area, color=A555))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+        scale_color_gradient(high = "red", low = "navy")+
+        facet_grid(.~Genotype)+
+  geom_hline(yintercept = 300)+
+  geom_vline(xintercept = 200)+
+  geom_vline(xintercept = 50)+
+  xlim(0,500)+
+        theme_classic(base_size = 12)+
+         theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))+
+  labs(y="MAP2 Expression", x = "Nucleus Area", title="Identification of Neurons")
+
+IF_Neurons <- IF_named %>%
+        filter(A555 >= 300,
+               Nuclei_area >= 50,
+               Nuclei_area <= 200,
+               Nuclei_roundness >= 0.85)
+
+IF_named <- IF_named %>%
+        mutate(Map2_expression = ifelse(A555 >= 300, "Map2_positive", "Map2_negative"),
+               Cell_Type = ifelse(Nuclei_area >= 50 & Nuclei_area <= 200 & Map2_expression == "Map2_positive", "Neurons", "Other"))
+
+
+```
+
+```{r}
+
+ggplot(IF_named, aes(y=A555, x=A488, color=Cell_Type))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+   facet_grid(.~Genotype)+
+   geom_vline(xintercept = 600)+
+  geom_hline(yintercept = 700)+
+        scale_x_log10()+
+        scale_y_log10()+
+        theme_classic(base_size = 12)+
+        labs(y="Map2", x = "pSyn", title="Map2 versus pSyn")+
+   theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))
+
+ggplot(IF_Neurons, aes(y=A555, x=A488, color= Genotype))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+   facet_grid(.~Genotype)+
+   geom_vline(xintercept = 600)+
+  geom_hline(yintercept = 700)+
+        scale_x_log10()+
+        scale_y_log10()+
+        theme_classic(base_size = 12)+
+        labs(y="Map2", x = "pSyn", title="Map2 versus pSyn in Neurons")+
+   theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))
+
+```
+
+
+
+```{r}
+# Assesss pUb positive cells from Map2+ cells set
+
+
+IF_pSyn <- IF_named %>%
+        mutate(pSyn_expression = ifelse(A488 >= 500, "pSyn_positive", "pSyn_negative"),
+               Map2_expression = ifelse(A555 >= 300, "Map2_positive", "Map2_negative"),
+               Cell_Type = ifelse(pSyn_expression == "pSyn_positive" & Map2_expression == "Map2_positive", "Double_positive", "Negative"))
+
+summary_pSyn <- IF_pSyn %>%
+        group_by(pSyn_expression) %>%
+        summarise(Count = length(pSyn_expression),
+                  Mean_pSyn = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_pSyn)
+
+summary_Map2 <- IF_pSyn %>%
+        group_by(Map2_expression) %>%
+        summarise(Count = length(Map2_expression),
+                  Mean_pSyn = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_Map2)
+
+summary_Double <- IF_pSyn %>%
+        group_by(Cell_Type) %>%
+        summarise(Count = length(Cell_Type),
+                  Mean_pSyn = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_Double)
+
+
+```
+
+```{r}
+
+
+Neuron_percentage <- IF_named%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(Neuron_percentage)
+
+
+replicates <- Neuron_percentage %>%
+        filter(Cell_Type == "Neurons") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="% Neurons", x = "", title="% Neurons per replicate")+
+        ylim(0,100)
+
+
+```
+```{r fig.width=15, fig.height=5}
+pSyn_percentage <- IF_pSyn%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(pSyn_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(pSyn_percentage)
+
+
+replicates <- pSyn_percentage %>%
+        filter(pSyn_expression == "pSyn_positive") 
+
+ggplot(replicates, aes(y=percent, x = Treatment, color = Genotype))+
+   facet_grid(.~Genotype)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pSyn Positive Cells", x = "", title="pSyn Positive Cells per Replicate")
+
+ggplot(replicates, aes(y=n, x = Treatment, color = Genotype))+
+  facet_grid(.~Genotype)+
+        geom_boxplot()+
+        geom_point()+
+        ylim(0,1000)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="Number of pSyn Positive Cells", x = "", title="pSyn Positive Cells per Replicate")
+
+
+```
+
+```{r fig.width=6, fig.height=4}
+
+Neuron_percentage_control <- IF_named%>%
+        group_by(Identifier, Genotype) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+
+replicates <- Neuron_percentage_control %>%
+        filter(Cell_Type == "Neurons") 
+
+
+ggplot(replicates, aes(y=percent, x =Genotype))+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="% Neurons", x = "", title="% Neurons per replicate")+
+        ylim(0,100)
+
+pSyn_percentage_control <- IF_pSyn%>%
+       
+        group_by(Identifier, Genotype) %>%
+        count(pSyn_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+
+replicates <- pSyn_percentage_control %>%
+        filter(pSyn_expression == "pSyn_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype))+
+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pSyn Positive Cells", x = "", title="%pSyn Positive Cells")
+
+ggplot(replicates, aes(y=n, x = Genotype))+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="Number of pSyn Positive Cells", x = "", title="Number of pSyn positive cells")
+
+```
+
+
+
+
+
+```{r}
+
+
+pSyn_Map2_percentage <- IF_pSyn%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(pSyn_Map2_percentage)
+
+
+replicates <- pSyn_Map2_percentage %>%
+        filter(Cell_Type == "Double_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+   ylim(0,20)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pSyn+Map2 Positive Cells", x = "", title="%pSyn/Map2 Double Positive Cells")
+
+
+```
+
+```{r}
+#pSyn Percentage in Neurons only
+
+IF_pSyn <- IF_Neurons %>%
+        mutate(pSyn_expression = ifelse(A488 >= 500, "pSyn_positive", "pSyn_negative"))
+
+pSyn_percentage <- IF_pSyn%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(pSyn_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(pSyn_percentage)
+
+
+replicates <- pSyn_percentage %>%
+        filter(pSyn_expression == "pSyn_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+  ylim(0,20)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pSyn Positive Neurons", x = "", title="%pSyn Positive in Neurons")
+
+
+```
+
+
+
+
+```{r}
+Summary <- IF_named %>%
+        group_by(Identifier, Genotype, Cell_Type, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pSyn = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_303 = mean(A647))
+
+ggplot(Summary, aes(y=Mean_303, x = Cell_Type, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+     
+        theme_classic(base_size = 12)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="303", x = "", title="303 Expression")
+
+```
+
+```{r}
+
+Neuron_pSyn_Summary <- IF_Neurons %>%
+  filter(A488 >= 500)%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pSyn = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_303 = mean(A647))
+
+ggplot(Neuron_pSyn_Summary, aes(y=Mean_303, x = Treatment, color = Genotype))+
+  facet_grid(.~Genotype)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 12)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.8)))+
+        labs(y="303", x = "", title="303 in pSyn+ Neurons")
+
+
+```
+
+
+```{r}
+#Produce merged data for export
+replicates <- pSyn_Map2_percentage %>%
+        filter(Cell_Type == "Double_positive") 
+
+merged_data <- right_join(Neuron_pSyn_Summary, replicates, by = c("Identifier", "Genotype", "Treatment"))%>%
+  rename("percent Map2pSyn+" = "percent")
+
+```

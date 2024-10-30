@@ -1,0 +1,423 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r warning = FALSE}
+# Load packages and data
+library(tidyverse)
+library(here)
+library(dplyr)
+library(RColorBrewer)
+library(gridExtra)
+library(ggpubr)
+library(rstatix)
+library(knitr)
+
+IF_named <- read.csv("/Users/roxannelariviere/Desktop/Dark genome/Results/GWAS/OPERA IF/Batch2/12-07-2023_GWAS_5w_CCCP_pUb-Lamp2-Map2[9616]/12-07-2023_GWAS_5w_CCCP_pUb488_LAMP1647_Map2555[20076]/2023-07-12T141112-0400[20879].csv")
+
+
+IF_named$Treatment <- factor(IF_named$Treatment, levels = c("Vehicle", "CCCP"))
+```
+
+```{r}
+IF_named <- IF_named %>% filter(Stain == "pUb/Lamp2/Map2")
+```
+
+```{r}
+# Remove Fields and Wells with low object counts:
+# Minimal filtration applied to include Parkin and PINK1 wells where many cells detached at later timepoints
+Cell_density <- IF_named %>%
+        group_by(Identifier, Genotype) %>%
+        summarise(Count = length(Nuclei_area),
+                  Nucleus_shape = mean(Nuclei_roundness),
+                  Nucleus_area = mean(Nuclei_area))
+
+Wells_to_remove <- Cell_density %>%
+  filter(Nucleus_shape <= 0.3)
+
+Wells_to_remove <- Wells_to_remove$Identifier
+
+IF_named <- IF_named %>%
+  filter(!Identifier %in% Wells_to_remove)
+
+```
+
+
+```{r}
+# Calculate total cell density per image
+# Image dimensions at 20X with water immersion lens are 625um x 625um --> 390,625 square microns
+
+Cell_density <- IF_named %>%
+        group_by(Identifier, Genotype, Field, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pUb = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_Lamp2 = mean(A647))
+
+ggplot(Cell_density, aes(y=Count, x = Genotype))+
+   facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Number of Cells per Field", x = "", title="Cells per Field")
+
+ggplot(Cell_density, aes(y=Cell_Size, x = Genotype))+
+   facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        scale_y_log10()+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Average Cell Size per Field", x = "", title="Cell Size")
+
+ggplot(Cell_density, aes(y=Mean_pUb, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="pUb Expression", x = "", title="pUb Expression")
+
+ggplot(Cell_density, aes(y=Mean_Lamp2, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Lamp2 Expression", x = "", title="Lamp2 Expression")
+
+
+```
+
+
+
+```{r fig.width = 8, fig.height = 5}
+
+ggplot(IF_named, aes(y=A555, x=Nuclei_roundness, color=A555))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+        scale_color_gradient(high = "red", low = "navy")+
+        facet_grid(.~Treatment)+
+  geom_hline(yintercept = 300)+
+  geom_vline(xintercept = 0.85)+
+        theme_classic(base_size = 12)+
+         theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))
+
+
+ggplot(IF_named, aes(y=A555, x=Nuclei_area, color=A555))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+        scale_color_gradient(high = "red", low = "navy")+
+        facet_grid(.~Genotype)+
+  geom_hline(yintercept = 300)+
+  geom_vline(xintercept = 200)+
+  geom_vline(xintercept = 50)+
+  xlim(0,500)+
+        theme_classic(base_size = 12)+
+         theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))+
+  labs(y="MAP2 Expression", x = "Nucleus Area", title="Identification of Neurons")
+
+IF_Neurons <- IF_named %>%
+        filter(A555 >= 300,
+               Nuclei_area >= 50,
+               Nuclei_area <= 200,
+               Nuclei_roundness >= 0.85)
+
+IF_named <- IF_named %>%
+        mutate(Map2_expression = ifelse(A555 >= 300, "Map2_positive", "Map2_negative"),
+               Cell_Type = ifelse(Nuclei_area >= 50 & Nuclei_area <= 200 & Map2_expression == "Map2_positive", "Neurons", "Other"))
+
+
+```
+
+```{r}
+
+ggplot(IF_named, aes(y=A555, x=A488, color=Cell_Type))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+   facet_grid(.~Genotype)+
+   geom_vline(xintercept = 200)+
+  geom_hline(yintercept = 300)+
+        scale_x_log10()+
+        scale_y_log10()+
+        theme_classic(base_size = 12)+
+        labs(y="Map2", x = "pUb", title="Map2 versus pUb")+
+   theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))
+
+ggplot(IF_Neurons, aes(y=A555, x=A488, color= Genotype))+
+        geom_jitter(size = 0.2, alpha =0.75)+
+   facet_grid(.~Genotype)+
+   geom_vline(xintercept = 200)+
+  geom_hline(yintercept = 300)+
+        scale_x_log10()+
+        scale_y_log10()+
+        theme_classic(base_size = 12)+
+        labs(y="Map2", x = "pUb", title="Map2 versus pUb in Neurons")+
+   theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))
+
+```
+
+
+
+```{r}
+# Assesss TH positive cells from Map2+ cells set
+
+
+IF_pUb <- IF_named %>%
+        mutate(pUb_expression = ifelse(A488 >= 200, "pUb_positive", "TH_negative"),
+               Map2_expression = ifelse(A555 >= 300, "Map2_positive", "Map2_negative"),
+               Cell_Type = ifelse(pUb_expression == "pUb_positive" & Map2_expression == "Map2_positive", "Double_positive", "Negative"))
+
+summary_pUb <- IF_pUb %>%
+        group_by(pUb_expression) %>%
+        summarise(Count = length(pUb_expression),
+                  Mean_TH = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_TH)
+
+summary_Map2 <- IF_pUb %>%
+        group_by(Map2_expression) %>%
+        summarise(Count = length(Map2_expression),
+                  Mean_pUb = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_Map2)
+
+summary_Double <- IF_pUb %>%
+        group_by(Cell_Type) %>%
+        summarise(Count = length(Cell_Type),
+                  Mean_pUb = mean(A488),
+                  Mean_map2 = mean(A555))
+
+print(summary_Double)
+
+
+```
+
+```{r}
+
+
+Neuron_percentage <- IF_named%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(Neuron_percentage)
+
+
+replicates <- Neuron_percentage %>%
+        filter(Cell_Type == "Neurons") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="% Neurons", x = "", title="% Neurons per replicate")+
+        ylim(0,100)
+
+
+```
+```{r fig.width=3, fig.height=2}
+pUb_percentage <- IF_pUb%>%
+        group_by(Identifier, Genotype) %>%
+        count(pUb_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(TH_percentage)
+
+
+replicates <- pUb_percentage %>%
+        filter(pUb_expression == "pUb_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pUb Positive Cells", x = "", title="pUb Positive Cells per Replicate")
+
+ggplot(replicates, aes(y=n, x = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+        ylim(0,4000)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="Number of pUb Positive Cells", x = "", title="pUb Positive Cells per Replicate")
+```
+
+```{r fig.width=3, fig.height=2}
+
+Neuron_percentage_control <- IF_named%>%
+        group_by(Identifier, Genotype) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+
+replicates <- Neuron_percentage_control %>%
+        filter(Cell_Type == "Neurons") 
+
+
+ggplot(replicates, aes(y=percent, x =Genotype))+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="% Neurons", x = "", title="% Neurons per replicate")+
+        ylim(0,100)
+
+pUb_percentage_control <- IF_pUb%>%
+       
+        group_by(Identifier, Genotype) %>%
+        count(pUb_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+
+replicates <- pUb_percentage_control %>%
+        filter(pUb_expression == "pUb_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype))+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pUb Positive Cells", x = "", title="%pUb Positive Cells")
+
+ggplot(replicates, aes(y=n, x = Genotype))+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(1)))+
+        labs(y="Number of pUb Positive Cells", x = "", title="Number of pUb positive cells")
+
+```
+
+
+
+
+
+```{r}
+
+
+pUb_Map2_percentage <- IF_pUb%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(Cell_Type)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(pUb_Map2_percentage)
+
+
+replicates <- pUb_Map2_percentage %>%
+        filter(Cell_Type == "Double_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+   ylim(0,100)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pUb+Map2 Positive Cells", x = "", title="%pUb/Map2 Double Positive Cells")
+
+
+```
+
+```{r}
+#pUb Percentage in Neurons only
+
+IF_pUb <- IF_Neurons %>%
+        mutate(pUb_expression = ifelse(A488 >= 200, "pUb_positive", "pUb_negative"))
+
+pUb_percentage <- IF_pUb%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        count(pUb_expression)%>%
+        mutate(total = sum(n))%>%
+        mutate(percent = 100*(n/total))
+
+kable(pUb_percentage)
+
+
+replicates <- pUb_percentage %>%
+        filter(pUb_expression == "pUb_positive") 
+
+
+ggplot(replicates, aes(y=percent, x = Genotype, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+        geom_point()+
+  ylim(0,100)+
+        theme_classic(base_size = 15)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(1)))+
+        labs(y="%pUb Positive Neurons", x = "", title="%pUb Positive in Neurons")
+
+
+```
+
+
+
+
+```{r}
+Summary <- IF_named %>%
+        group_by(Identifier, Genotype, Cell_Type, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pUb = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_Lamp2 = mean(A647))
+
+ggplot(Summary, aes(y=Mean_Lamp2, x = Cell_Type, color = Genotype))+
+  facet_grid(.~Treatment)+
+        geom_boxplot()+
+     
+        theme_classic(base_size = 12)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=0), axis.text.y = element_text(size=rel(0.5)))+
+        labs(y="Lamp2", x = "", title="Lamp2 Expression")
+
+```
+
+```{r}
+
+Neuron_TH_Summary <- IF_Neurons %>%
+  filter(A488 >= 200)%>%
+        group_by(Identifier, Genotype, Treatment) %>%
+        summarise(Count = length(Nuclei_area),
+                  Cell_Size = mean(Cell_area),
+                  Mean_pUb = mean(A488),
+                  Mean_Map2 = mean(A555),
+                  Mean_Lamp2 = mean(A647))
+
+ggplot(Neuron_TH_Summary, aes(y=Mean_Lamp2, x = Treatment, color = Genotype))+
+  facet_grid(.~Genotype)+
+        geom_boxplot()+
+        geom_point()+
+        theme_classic(base_size = 12)+
+        theme(axis.text.x=element_text(size=rel(0.5), angle=45, vjust = 0.8), axis.text.y = element_text(size=rel(0.8)))+
+        labs(y="Lamp2", x = "", title="Lamp2 in TH+ Neurons")
+
+
+```
+
+
+```{r}
+#Produce merged data for export
+replicates <- TH_Map2_percentage %>%
+        filter(Cell_Type == "Double_positive") 
+
+merged_data <- right_join(Neuron_TH_Summary, replicates, by = c("Identifier", "Genotype", "Treatment"))%>%
+  rename("percent Map2TH+" = "percent")
+
+```
